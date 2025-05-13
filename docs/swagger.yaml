@@ -3,35 +3,137 @@ definitions:
   auth.AccessReq:
     properties:
       refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
+    required:
+    - refresh_token
+    type: object
+  auth.ForgotPasswordRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+    required:
+    - email
     type: object
   auth.LoginRequest:
     properties:
       email:
+        example: john@example.com
         type: string
       password:
+        example: password123
         type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.OTPReq:
+    properties:
+      phone:
+        example: "+919876543210"
+        type: string
+    required:
+    - phone
+    type: object
+  auth.OTPVerifyRequest:
+    properties:
+      code:
+        example: "123456"
+        type: string
+      phone:
+        example: "+919876543210"
+        type: string
+    required:
+    - code
+    - phone
     type: object
   auth.RegisterRequest:
     properties:
       email:
+        example: john@example.com
         type: string
       password:
+        example: password123
+        minLength: 6
+        type: string
+      phone:
+        example: "+919876543210"
         type: string
       roles:
-        items:
-          type: string
-        type: array
-      username:
+        example: player
         type: string
+      username:
+        example: john_doe
+        type: string
+    required:
+    - email
+    - password
+    - phone
+    - username
+    type: object
+  auth.ResetPasswordRequest:
+    properties:
+      password:
+        example: newpassword123
+        minLength: 6
+        type: string
+      token:
+        example: reset-token-123456
+        type: string
+    required:
+    - password
+    - token
     type: object
 host: localhost:8088
 info:
   contact: {}
   description: This is a sample server for demonstrating Swagger with Gin.
-  title: MiowNation REST API
+  title: MiowNation REST API(-_-)
   version: "1.0"
 paths:
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset link to the user's email
+      parameters:
+      - description: Forgot Password Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reset link sent
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid email
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to send reset email
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Request password reset
+      tags:
+      - Auth
   /auth/login:
     post:
       consumes:
@@ -144,6 +246,163 @@ paths:
               type: string
             type: object
       summary: Register a new user
+      tags:
+      - Auth
+  /auth/request-otp:
+    post:
+      consumes:
+      - application/json
+      description: Generate and send an OTP to the user's phone number
+      parameters:
+      - description: Phone Number Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.OTPReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP sent successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid phone number
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create OTP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Request OTP
+      tags:
+      - Auth
+  /auth/resend-otp:
+    post:
+      consumes:
+      - application/json
+      description: Resends an OTP to the provided phone number. If an unexpired OTP
+        exists and was sent recently, it will be reused.
+      parameters:
+      - description: Phone number for which OTP needs to be resent
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.OTPReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP resent successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid phone number
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: OTP recently sent. Please wait.
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Could not generate OTP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Resend OTP
+      tags:
+      - Auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets the user's password using a valid reset token
+      parameters:
+      - description: Reset Password Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password updated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid or expired token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reset password
+      tags:
+      - Auth
+  /auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verify the OTP, auto-register if user doesn't exist, and return
+        tokens
+      parameters:
+      - description: OTP Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.OTPVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified, tokens and user info returned
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid or expired OTP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify OTP and Login/Register
       tags:
       - Auth
 swagger: "2.0"
