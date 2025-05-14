@@ -3,97 +3,135 @@ package auth
 import (
 	"time"
 
-	"github.com/DhavalSuthar-24/miow/config"
-	"github.com/DhavalSuthar-24/miow/internal/user"
+	"github.com/DhavalSuthar-24/miow/internal/user" // Assuming your user model is here
+	"gorm.io/gorm"
 )
 
-// Repository interface for auth operations
 type AuthRepository interface {
-	CreateUser(user *user.User) error
+	CreateUser(u *user.User) error
 	GetUserByEmail(email string) (*user.User, error)
 	GetUserByPhone(phone string) (*user.User, error)
+	GetUserByID(id uint) (*user.User, error)
+	UpdateUser(u *user.User) error
+	GetUserByResetToken(token string) (*user.User, error)
+	GetUserByVerifyToken(token string) (*user.User, error)
+
 	SaveOTP(otp *OTP) error
 	GetOTP(phone, code string) (*OTP, error)
-	GetLatestOTP(phone string) (*OTP, error)
 	UpdateOTP(otp *OTP) error
+	GetLatestOTP(phone string) (*OTP, error)
+
 	SaveRefreshToken(token *user.RefreshToken) error
-	GetRefreshToken(token string) (*user.RefreshToken, error)
-	InvalidateRefreshToken(token string) error
-	UpdateUser(user *user.User) error
+	GetRefreshToken(tokenString string) (*user.RefreshToken, error)
+	InvalidateRefreshToken(tokenString string) error
+	DeleteRefreshToken(tokenString string) error
 }
 
-type authRepo struct{}
-
-// NewAuthRepository creates a new auth repository
-func NewAuthRepository() AuthRepository {
-	return &authRepo{}
+type authRepository struct {
+	db *gorm.DB
 }
 
-// CreateUser creates a new user in the database
-func (r *authRepo) CreateUser(user *user.User) error {
-	return config.DB.Create(user).Error
+func NewAuthRepository(db *gorm.DB) AuthRepository {
+	return &authRepository{db: db}
 }
 
-// GetUserByEmail retrieves a user by email
-func (r *authRepo) GetUserByEmail(email string) (*user.User, error) {
+func (r *authRepository) CreateUser(u *user.User) error {
+	return r.db.Create(u).Error
+}
+
+func (r *authRepository) GetUserByEmail(email string) (*user.User, error) {
 	var u user.User
-	err := config.DB.Where("email = ?", email).Preload("Roles").First(&u).Error
-	return &u, err
+	if err := r.db.Where("email = ?", email).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
 }
 
-// GetUserByPhone retrieves a user by phone number
-func (r *authRepo) GetUserByPhone(phone string) (*user.User, error) {
+func (r *authRepository) GetUserByPhone(phone string) (*user.User, error) {
 	var u user.User
-	err := config.DB.Where("phone = ?", phone).Preload("Roles").First(&u).Error
-	return &u, err
+	if err := r.db.Where("phone = ?", phone).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
 }
 
-// SaveOTP saves an OTP to the database
-func (r *authRepo) SaveOTP(otp *OTP) error {
-	return config.DB.Create(otp).Error
+func (r *authRepository) GetUserByID(id uint) (*user.User, error) {
+	var u user.User
+	if err := r.db.First(&u, id).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
 }
 
-// GetOTP retrieves an OTP by phone and code
-func (r *authRepo) GetOTP(phone, code string) (*OTP, error) {
+func (r *authRepository) UpdateUser(u *user.User) error {
+	return r.db.Save(u).Error
+}
+
+func (r *authRepository) GetUserByResetToken(token string) (*user.User, error) {
+	var u user.User
+	if err := r.db.Where("reset_token = ? AND reset_expires > ?", token, time.Now()).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *authRepository) GetUserByVerifyToken(token string) (*user.User, error) {
+	var u user.User
+	if err := r.db.Where("verify_token = ? AND verify_expires > ?", token, time.Now()).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *authRepository) SaveOTP(otp *OTP) error {
+	return r.db.Create(otp).Error
+}
+
+func (r *authRepository) GetOTP(phone, code string) (*OTP, error) {
 	var otp OTP
-	err := config.DB.Where("phone = ? AND code = ? AND verified = false AND expires_at > ?",
-		phone, code, time.Now()).First(&otp).Error
-	return &otp, err
+	if err := r.db.Where("phone = ? AND code = ? AND expires_at > ? AND verified = ?", phone, code, time.Now(), false).First(&otp).Error; err != nil {
+		return nil, err
+	}
+	return &otp, nil
 }
 
-// GetLatestOTP retrieves the latest unexpired OTP for a phone number
-func (r *authRepo) GetLatestOTP(phone string) (*OTP, error) {
+func (r *authRepository) UpdateOTP(otp *OTP) error {
+	return r.db.Save(otp).Error
+}
+
+func (r *authRepository) GetLatestOTP(phone string) (*OTP, error) {
 	var otp OTP
-	err := config.DB.Where("phone = ? AND verified = false AND expires_at > ?",
-		phone, time.Now()).Order("created_at desc").First(&otp).Error
-	return &otp, err
+	if err := r.db.Where("phone = ? AND expires_at > ?", phone, time.Now()).Order("created_at DESC").First(&otp).Error; err != nil {
+		return nil, err
+	}
+	return &otp, nil
 }
 
-// UpdateOTP updates an OTP in the database
-func (r *authRepo) UpdateOTP(otp *OTP) error {
-	return config.DB.Save(otp).Error
+func (r *authRepository) SaveRefreshToken(token *user.RefreshToken) error {
+	return r.db.Create(token).Error
 }
 
-// SaveRefreshToken saves a refresh token to the database
-func (r *authRepo) SaveRefreshToken(token *user.RefreshToken) error {
-	return config.DB.Create(token).Error
+func (r *authRepository) GetRefreshToken(tokenString string) (*user.RefreshToken, error) {
+	var rt user.RefreshToken
+	if err := r.db.Where("token = ? AND expires_at > ? AND revoked = ?", tokenString, time.Now(), false).First(&rt).Error; err != nil {
+		return nil, err
+	}
+	return &rt, nil
 }
 
-// GetRefreshToken retrieves a refresh token by token string
-func (r *authRepo) GetRefreshToken(token string) (*user.RefreshToken, error) {
-	var t user.RefreshToken
-	err := config.DB.Where("token = ? AND revoked = false AND expires_at > ?",
-		token, time.Now()).First(&t).Error
-	return &t, err
+func (r *authRepository) InvalidateRefreshToken(tokenString string) error {
+	return r.db.Model(&user.RefreshToken{}).Where("token = ?", tokenString).Update("revoked", true).Error
 }
 
-// InvalidateRefreshToken invalidates a refresh token
-func (r *authRepo) InvalidateRefreshToken(token string) error {
-	return config.DB.Model(&user.RefreshToken{}).Where("token = ?", token).
-		Update("revoked", true).Error
+func (r *authRepository) DeleteRefreshToken(tokenString string) error {
+	return r.db.Where("token = ?", tokenString).Delete(&user.RefreshToken{}).Error
 }
 
-// UpdateUser updates a user in the database
-func (r *authRepo) UpdateUser(user *user.User) error {
-	return config.DB.Save(user).Error
+// You might also need a way to get Roles if not handled elsewhere
+func (r *authRepository) GetRoleByName(roleName string) (*user.Role, error) {
+	var role user.Role
+	if err := r.db.Where("name = ?", roleName).First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
 }

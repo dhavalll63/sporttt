@@ -8,6 +8,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
+	"github.com/DhavalSuthar-24/miow/config" // Import the config package
 	"github.com/DhavalSuthar-24/miow/internal/auth"
 )
 
@@ -15,7 +16,11 @@ func SetupRoutes() *gin.Engine {
 	r := gin.Default()
 	r.Use(cors.Default()) // allows all origins, GET/POST/PUT
 
-	r.Static("/public", "./public")
+	// Access config for static file serving if needed (e.g., dynamic public path)
+	// cfg := config.GetConfig()
+	// r.Static("/public", cfg.App.PublicDir) // Example if public dir was configurable
+
+	r.Static("/public", "./public") // Current setup
 
 	// Welcome page
 	r.GET("/", func(c *gin.Context) {
@@ -27,7 +32,8 @@ func SetupRoutes() *gin.Engine {
 				<h1>Welcome to MiowNation 🐱</h1>
 				<div>
 				<img src="/public/miow.jpeg" alt="Cat" width="300" />
-					// <a src="http://localhost:8088/swagger/index.html">swagger</a>
+					 <!-- Corrected link -->
+					 <br/><a href="/swagger/index.html">View API Documentation (Swagger)</a>
 				</div>
 					</body>
 			</html>
@@ -39,8 +45,14 @@ func SetupRoutes() *gin.Engine {
 
 	// API routes
 	api := r.Group("/api")
-	authGroup := api.Group("/auth")
-	auth.RegisterAuthRoutes(authGroup)
+	authGroup := api.Group("/auth") // This group will be /api/auth
+
+	// Get the loaded configuration and database instance
+	cfg := config.GetConfig()
+	dbInstance := config.DB // Access the global DB instance
+
+	// Pass dbInstance and cfg to RegisterAuthRoutes
+	auth.RegisterAuthRoutes(authGroup, dbInstance, cfg)
 
 	return r
 }

@@ -45,15 +45,6 @@ type Role struct {
 	Description string
 }
 
-// OTP model for phone verification
-type OTP struct {
-	gorm.Model
-	Phone     string    `gorm:"not null;index"`
-	Code      string    `gorm:"not null"`
-	ExpiresAt time.Time `gorm:"not null" json:"expired_at"`
-	Verified  bool      `gorm:"default:false"`
-}
-
 // Token model for storing refresh tokens
 type RefreshToken struct {
 	gorm.Model
