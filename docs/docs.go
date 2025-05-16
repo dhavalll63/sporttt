@@ -15,9 +15,78 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/change-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Allows an authenticated user to change their password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Change Password",
+                "parameters": [
+                    {
+                        "description": "Old and new password details",
+                        "name": "passwords",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password changed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input or password mismatch",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized or incorrect old password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to change password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/forgot-password": {
             "post": {
-                "description": "Sends a password reset link to the user's email",
+                "description": "Sends a password reset link/code to the user's email.",
                 "consumes": [
                     "application/json"
                 ],
@@ -27,10 +96,10 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Request password reset",
+                "summary": "Forgot Password",
                 "parameters": [
                     {
-                        "description": "Forgot Password Request",
+                        "description": "Email for password reset",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -41,7 +110,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Reset link sent",
+                        "description": "Password reset instructions sent",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -50,7 +119,77 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid email",
+                        "description": "Invalid email format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User with this email not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to process request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticate user with email/username and password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Login successful, returns tokens and user info",
+                        "schema": {
+                            "$ref": "#/definitions/auth.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials or user not verified",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -68,7 +207,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Failed to send reset email",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -79,33 +218,24 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login": {
+        "/auth/logout": {
             "post": {
-                "description": "Authenticate user with email and password",
-                "consumes": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
+                "description": "Invalidates the user's refresh token.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Login user",
-                "parameters": [
-                    {
-                        "description": "Login",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/auth.LoginRequest"
-                        }
-                    }
-                ],
+                "summary": "Logout User",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Logged out successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -114,7 +244,114 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Refresh token missing or invalid",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to logout",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the profile of the currently authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get User Profile",
+                "responses": {
+                    "200": {
+                        "description": "User profile data",
+                        "schema": {
+                            "$ref": "#/definitions/auth.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the profile of the currently authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update User Profile",
+                "parameters": [
+                    {
+                        "description": "Profile data to update",
+                        "name": "profileData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated user profile data",
+                        "schema": {
+                            "$ref": "#/definitions/auth.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -124,6 +361,100 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Username already taken",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me/profile-image": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the profile image for the currently authenticated user.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update Profile Image",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Profile image file",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile image updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid file or input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to upload or save image path",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -154,7 +485,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.AccessReq"
+                            "$ref": "#/definitions/auth.RefreshTokenRequest"
                         }
                     }
                 ],
@@ -178,7 +509,7 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Invalid refresh token",
+                        "description": "Invalid or expired refresh token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -200,7 +531,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Create a new user with username, email and password",
+                "description": "Create a new user with username, email, phone and password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -213,7 +544,7 @@ const docTemplate = `{
                 "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "Register",
+                        "description": "User registration details",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -224,7 +555,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "User registered successfully, returns tokens and user info",
+                        "schema": {
+                            "$ref": "#/definitions/auth.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or invalid input",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -232,8 +569,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "409": {
+                        "description": "User with this email or phone or username already exists",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -242,7 +579,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -255,7 +592,7 @@ const docTemplate = `{
         },
         "/auth/request-otp": {
             "post": {
-                "description": "Generate and send an OTP to the user's phone number",
+                "description": "Generate and send an OTP to the user's phone number for verification or login.",
                 "consumes": [
                     "application/json"
                 ],
@@ -273,7 +610,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.OTPReq"
+                            "$ref": "#/definitions/auth.OTPRequest"
                         }
                     }
                 ],
@@ -288,7 +625,16 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid phone number",
+                        "description": "Invalid phone number format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many OTP requests. Please try again later.",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -297,7 +643,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Failed to create OTP",
+                        "description": "Failed to generate or send OTP",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -308,9 +654,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/resend-otp": {
+        "/auth/resend-verification": {
             "post": {
-                "description": "Resends an OTP to the provided phone number. If an unexpired OTP exists and was sent recently, it will be reused.",
+                "description": "Resends the email verification link to the user.",
                 "consumes": [
                     "application/json"
                 ],
@@ -320,21 +666,21 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Resend OTP",
+                "summary": "Resend Verification Email",
                 "parameters": [
                     {
-                        "description": "Phone number for which OTP needs to be resent",
-                        "name": "body",
+                        "description": "Email to resend verification for",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.OTPReq"
+                            "$ref": "#/definitions/auth.ResendVerificationRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OTP resent successfully",
+                        "description": "Verification email resent",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -343,7 +689,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid phone number",
+                        "description": "Invalid email format",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -351,8 +697,17 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "429": {
-                        "description": "OTP recently sent. Please wait.",
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Email already verified",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -361,7 +716,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Could not generate OTP",
+                        "description": "Failed to resend verification",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -374,7 +729,7 @@ const docTemplate = `{
         },
         "/auth/reset-password": {
             "post": {
-                "description": "Resets the user's password using a valid reset token",
+                "description": "Resets the user's password using a valid reset token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -384,10 +739,10 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Reset password",
+                "summary": "Reset Password",
                 "parameters": [
                     {
-                        "description": "Reset Password Request",
+                        "description": "Password reset token and new password",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -398,7 +753,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Password updated",
+                        "description": "Password reset successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -407,7 +762,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid input",
+                        "description": "Invalid input or password mismatch",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -416,7 +771,7 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Invalid or expired token",
+                        "description": "Invalid or expired reset token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -436,9 +791,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/verify-otp": {
-            "post": {
-                "description": "Verify the OTP, auto-register if user doesn't exist, and return tokens",
+        "/auth/verify-email": {
+            "get": {
+                "description": "Verifies a user's email address using a token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -448,28 +803,28 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Verify OTP and Login/Register",
+                "summary": "Verify Email",
                 "parameters": [
                     {
-                        "description": "OTP Verification Request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/auth.OTPVerifyRequest"
-                        }
+                        "type": "string",
+                        "description": "Email verification token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OTP verified, tokens and user info returned",
+                        "description": "Email verified successfully",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Invalid input",
+                        "description": "Invalid or missing token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -478,7 +833,77 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Invalid or expired OTP",
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to verify email",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-otp": {
+            "post": {
+                "description": "Verify the OTP. If user with phone doesn't exist, create one. Then log in user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify OTP",
+                "parameters": [
+                    {
+                        "description": "OTP Verification Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.VerifyOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP verified, tokens and user info returned",
+                        "schema": {
+                            "$ref": "#/definitions/auth.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input or OTP format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid, expired, or already used OTP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -491,15 +916,38 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "auth.AccessReq": {
+        "auth.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/auth.UserResponse"
+                }
+            }
+        },
+        "auth.ChangePasswordRequest": {
             "type": "object",
             "required": [
-                "refresh_token"
+                "new_password",
+                "old_password",
+                "password_confirm"
             ],
             "properties": {
-                "refresh_token": {
+                "new_password": {
                     "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    "maxLength": 72,
+                    "minLength": 8
+                },
+                "old_password": {
+                    "type": "string"
+                },
+                "password_confirm": {
+                    "type": "string"
                 }
             }
         },
@@ -518,11 +966,12 @@ const docTemplate = `{
         "auth.LoginRequest": {
             "type": "object",
             "required": [
-                "email",
+                "login_identifier",
                 "password"
             ],
             "properties": {
-                "email": {
+                "login_identifier": {
+                    "description": "Can be email or username",
                     "type": "string",
                     "example": "john@example.com"
                 },
@@ -532,7 +981,7 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.OTPReq": {
+        "auth.OTPRequest": {
             "type": "object",
             "required": [
                 "phone"
@@ -544,20 +993,15 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.OTPVerifyRequest": {
+        "auth.RefreshTokenRequest": {
             "type": "object",
             "required": [
-                "code",
-                "phone"
+                "refresh_token"
             ],
             "properties": {
-                "code": {
+                "refresh_token": {
                     "type": "string",
-                    "example": "123456"
-                },
-                "phone": {
-                    "type": "string",
-                    "example": "+919876543210"
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
             }
         },
@@ -576,20 +1020,42 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6,
+                    "maxLength": 72,
+                    "minLength": 8,
                     "example": "password123"
                 },
                 "phone": {
+                    "description": "e164 for international phone number format",
                     "type": "string",
                     "example": "+919876543210"
                 },
-                "roles": {
+                "role": {
+                    "description": "Specify allowed roles if fixed",
                     "type": "string",
+                    "enum": [
+                        "player",
+                        "admin",
+                        "manager"
+                    ],
                     "example": "player"
                 },
                 "username": {
                     "type": "string",
+                    "maxLength": 30,
+                    "minLength": 3,
                     "example": "john_doe"
+                }
+            }
+        },
+        "auth.ResendVerificationRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "johndoe@example.com"
                 }
             }
         },
@@ -597,17 +1063,169 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "password",
+                "password_confirm",
                 "token"
             ],
             "properties": {
                 "password": {
                     "type": "string",
-                    "minLength": 6,
+                    "maxLength": 72,
+                    "minLength": 8,
+                    "example": "newpassword123"
+                },
+                "password_confirm": {
+                    "type": "string",
                     "example": "newpassword123"
                 },
                 "token": {
                     "type": "string",
                     "example": "reset-token-123456"
+                }
+            }
+        },
+        "auth.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "123 Main St"
+                },
+                "bio": {
+                    "type": "string",
+                    "example": "Avid cricketer and developer."
+                },
+                "city": {
+                    "type": "string",
+                    "example": "Mumbai"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "India"
+                },
+                "district": {
+                    "type": "string",
+                    "example": "Mumbai Suburban"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "postal_code": {
+                    "type": "string",
+                    "example": "400001"
+                },
+                "preferred_sports": {
+                    "type": "string",
+                    "example": "[\"cricket\",\"football\"]"
+                },
+                "social_media": {
+                    "type": "string",
+                    "example": "{\"twitter\":\"@johndoe\"}"
+                },
+                "state": {
+                    "type": "string",
+                    "example": "Maharashtra"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 3,
+                    "example": "john_doe_new"
+                }
+            }
+        },
+        "auth.UserResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "coordinates": {
+                    "description": "Assuming JSON string",
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "district": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_active": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phone_verified": {
+                    "type": "boolean"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "preferred_sports": {
+                    "description": "Assuming JSON string",
+                    "type": "string"
+                },
+                "profile_image": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "social_media": {
+                    "description": "Assuming JSON string",
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "verified": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth.VerifyOTPRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "phone"
+            ],
+            "properties": {
+                "code": {
+                    "description": "Assuming 6 digit OTP",
+                    "type": "string",
+                    "example": "123456"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+919876543210"
                 }
             }
         }

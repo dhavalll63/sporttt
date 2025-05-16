@@ -1,12 +1,28 @@
 basePath: /api
 definitions:
-  auth.AccessReq:
+  auth.AuthResponse:
     properties:
+      access_token:
+        type: string
       refresh_token:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/auth.UserResponse'
+    type: object
+  auth.ChangePasswordRequest:
+    properties:
+      new_password:
+        maxLength: 72
+        minLength: 8
+        type: string
+      old_password:
+        type: string
+      password_confirm:
         type: string
     required:
-    - refresh_token
+    - new_password
+    - old_password
+    - password_confirm
     type: object
   auth.ForgotPasswordRequest:
     properties:
@@ -18,17 +34,18 @@ definitions:
     type: object
   auth.LoginRequest:
     properties:
-      email:
+      login_identifier:
+        description: Can be email or username
         example: john@example.com
         type: string
       password:
         example: password123
         type: string
     required:
-    - email
+    - login_identifier
     - password
     type: object
-  auth.OTPReq:
+  auth.OTPRequest:
     properties:
       phone:
         example: "+919876543210"
@@ -36,9 +53,167 @@ definitions:
     required:
     - phone
     type: object
-  auth.OTPVerifyRequest:
+  auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: password123
+        maxLength: 72
+        minLength: 8
+        type: string
+      phone:
+        description: e164 for international phone number format
+        example: "+919876543210"
+        type: string
+      role:
+        description: Specify allowed roles if fixed
+        enum:
+        - player
+        - admin
+        - manager
+        example: player
+        type: string
+      username:
+        example: john_doe
+        maxLength: 30
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - phone
+    - username
+    type: object
+  auth.ResendVerificationRequest:
+    properties:
+      email:
+        example: johndoe@example.com
+        type: string
+    required:
+    - email
+    type: object
+  auth.ResetPasswordRequest:
+    properties:
+      password:
+        example: newpassword123
+        maxLength: 72
+        minLength: 8
+        type: string
+      password_confirm:
+        example: newpassword123
+        type: string
+      token:
+        example: reset-token-123456
+        type: string
+    required:
+    - password
+    - password_confirm
+    - token
+    type: object
+  auth.UpdateProfileRequest:
+    properties:
+      address:
+        example: 123 Main St
+        type: string
+      bio:
+        example: Avid cricketer and developer.
+        type: string
+      city:
+        example: Mumbai
+        type: string
+      country:
+        example: India
+        type: string
+      district:
+        example: Mumbai Suburban
+        type: string
+      name:
+        example: John Doe
+        type: string
+      postal_code:
+        example: "400001"
+        type: string
+      preferred_sports:
+        example: '["cricket","football"]'
+        type: string
+      social_media:
+        example: '{"twitter":"@johndoe"}'
+        type: string
+      state:
+        example: Maharashtra
+        type: string
+      username:
+        example: john_doe_new
+        maxLength: 30
+        minLength: 3
+        type: string
+    type: object
+  auth.UserResponse:
+    properties:
+      address:
+        type: string
+      bio:
+        type: string
+      city:
+        type: string
+      coordinates:
+        description: Assuming JSON string
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      district:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: integer
+      last_active:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      phone_verified:
+        type: boolean
+      postal_code:
+        type: string
+      preferred_sports:
+        description: Assuming JSON string
+        type: string
+      profile_image:
+        type: string
+      role:
+        type: string
+      social_media:
+        description: Assuming JSON string
+        type: string
+      state:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  auth.VerifyOTPRequest:
     properties:
       code:
+        description: Assuming 6 digit OTP
         example: "123456"
         type: string
       phone:
@@ -48,57 +223,64 @@ definitions:
     - code
     - phone
     type: object
-  auth.RegisterRequest:
-    properties:
-      email:
-        example: john@example.com
-        type: string
-      password:
-        example: password123
-        minLength: 6
-        type: string
-      phone:
-        example: "+919876543210"
-        type: string
-      roles:
-        example: player
-        type: string
-      username:
-        example: john_doe
-        type: string
-    required:
-    - email
-    - password
-    - phone
-    - username
-    type: object
-  auth.ResetPasswordRequest:
-    properties:
-      password:
-        example: newpassword123
-        minLength: 6
-        type: string
-      token:
-        example: reset-token-123456
-        type: string
-    required:
-    - password
-    - token
-    type: object
-host: localhost:8088
+host: localhost:8088  
 info:
   contact: {}
   description: This is a sample server for demonstrating Swagger with Gin.
   title: MiowNation REST API(-_-)
   version: "1.0"
 paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Allows an authenticated user to change their password.
+      parameters:
+      - description: Old and new password details
+        in: body
+        name: passwords
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input or password mismatch
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized or incorrect old password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to change password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change Password
+      tags:
+      - Profile
   /auth/forgot-password:
     post:
       consumes:
       - application/json
-      description: Sends a password reset link to the user's email
+      description: Sends a password reset link/code to the user's email.
       parameters:
-      - description: Forgot Password Request
+      - description: Email for password reset
         in: body
         name: request
         required: true
@@ -108,13 +290,59 @@ paths:
       - application/json
       responses:
         "200":
-          description: Reset link sent
+          description: Password reset instructions sent
           schema:
             additionalProperties:
               type: string
             type: object
         "400":
-          description: Invalid email
+          description: Invalid email format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User with this email not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to process request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Forgot Password
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email/username and password.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful, returns tokens and user info
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials or user not verified
           schema:
             additionalProperties:
               type: string
@@ -126,37 +354,96 @@ paths:
               type: string
             type: object
         "500":
-          description: Failed to send reset email
+          description: Internal server error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Request password reset
+      summary: Login user
       tags:
       - Auth
-  /auth/login:
+  /auth/logout:
     post:
-      consumes:
-      - application/json
-      description: Authenticate user with email and password
-      parameters:
-      - description: Login
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/auth.LoginRequest'
+      description: Invalidates the user's refresh token.
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Logged out successfully
           schema:
             additionalProperties:
               type: string
             type: object
         "400":
-          description: Bad Request
+          description: Refresh token missing or invalid
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to logout
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Logout User
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      description: Retrieves the profile of the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile data
+          schema:
+            $ref: '#/definitions/auth.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get User Profile
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Updates the profile of the currently authenticated user.
+      parameters:
+      - description: Profile data to update
+        in: body
+        name: profileData
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated user profile data
+          schema:
+            $ref: '#/definitions/auth.UserResponse'
+        "400":
+          description: Invalid input
           schema:
             additionalProperties:
               type: string
@@ -167,9 +454,72 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Login user
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Username already taken
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update User Profile
       tags:
-      - Auth
+      - Profile
+  /auth/me/profile-image:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Updates the profile image for the currently authenticated user.
+      parameters:
+      - description: Profile image file
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile image updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid file or input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to upload or save image path
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update Profile Image
+      tags:
+      - Profile
   /auth/refresh-token:
     post:
       consumes:
@@ -181,7 +531,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.AccessReq'
+          $ref: '#/definitions/auth.RefreshTokenRequest'
       produces:
       - application/json
       responses:
@@ -198,7 +548,7 @@ paths:
               type: string
             type: object
         "401":
-          description: Invalid refresh token
+          description: Invalid or expired refresh token
           schema:
             additionalProperties:
               type: string
@@ -216,9 +566,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new user with username, email and password
+      description: Create a new user with username, email, phone and password.
       parameters:
-      - description: Register
+      - description: User registration details
         in: body
         name: user
         required: true
@@ -228,19 +578,23 @@ paths:
       - application/json
       responses:
         "201":
-          description: Created
+          description: User registered successfully, returns tokens and user info
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Validation error or invalid input
           schema:
             additionalProperties:
               type: string
             type: object
-        "400":
-          description: Bad Request
+        "409":
+          description: User with this email or phone or username already exists
           schema:
             additionalProperties:
               type: string
             type: object
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             additionalProperties:
               type: string
@@ -252,14 +606,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Generate and send an OTP to the user's phone number
+      description: Generate and send an OTP to the user's phone number for verification
+        or login.
       parameters:
       - description: Phone Number Request
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.OTPReq'
+          $ref: '#/definitions/auth.OTPRequest'
       produces:
       - application/json
       responses:
@@ -270,13 +625,19 @@ paths:
               type: string
             type: object
         "400":
-          description: Invalid phone number
+          description: Invalid phone number format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: Too many OTP requests. Please try again later.
           schema:
             additionalProperties:
               type: string
             type: object
         "500":
-          description: Failed to create OTP
+          description: Failed to generate or send OTP
           schema:
             additionalProperties:
               type: string
@@ -284,56 +645,61 @@ paths:
       summary: Request OTP
       tags:
       - Auth
-  /auth/resend-otp:
+  /auth/resend-verification:
     post:
       consumes:
       - application/json
-      description: Resends an OTP to the provided phone number. If an unexpired OTP
-        exists and was sent recently, it will be reused.
+      description: Resends the email verification link to the user.
       parameters:
-      - description: Phone number for which OTP needs to be resent
+      - description: Email to resend verification for
         in: body
-        name: body
+        name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.OTPReq'
+          $ref: '#/definitions/auth.ResendVerificationRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OTP resent successfully
+          description: Verification email resent
           schema:
             additionalProperties:
               type: string
             type: object
         "400":
-          description: Invalid phone number
+          description: Invalid email format
           schema:
             additionalProperties:
               type: string
             type: object
-        "429":
-          description: OTP recently sent. Please wait.
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Email already verified
           schema:
             additionalProperties:
               type: string
             type: object
         "500":
-          description: Could not generate OTP
+          description: Failed to resend verification
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Resend OTP
+      summary: Resend Verification Email
       tags:
       - Auth
   /auth/reset-password:
     post:
       consumes:
       - application/json
-      description: Resets the user's password using a valid reset token
+      description: Resets the user's password using a valid reset token.
       parameters:
-      - description: Reset Password Request
+      - description: Password reset token and new password
         in: body
         name: request
         required: true
@@ -343,13 +709,54 @@ paths:
       - application/json
       responses:
         "200":
-          description: Password updated
+          description: Password reset successfully
           schema:
             additionalProperties:
               type: string
             type: object
         "400":
-          description: Invalid input
+          description: Invalid input or password mismatch
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid or expired reset token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reset Password
+      tags:
+      - Auth
+  /auth/verify-email:
+    get:
+      consumes:
+      - application/json
+      description: Verifies a user's email address using a token.
+      parameters:
+      - description: Email verification token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid or missing token
           schema:
             additionalProperties:
               type: string
@@ -361,48 +768,53 @@ paths:
               type: string
             type: object
         "500":
-          description: Failed to update password
+          description: Failed to verify email
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Reset password
+      summary: Verify Email
       tags:
       - Auth
   /auth/verify-otp:
     post:
       consumes:
       - application/json
-      description: Verify the OTP, auto-register if user doesn't exist, and return
-        tokens
+      description: Verify the OTP. If user with phone doesn't exist, create one. Then
+        log in user.
       parameters:
       - description: OTP Verification Request
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.OTPVerifyRequest'
+          $ref: '#/definitions/auth.VerifyOTPRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OTP verified, tokens and user info returned
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/auth.AuthResponse'
         "400":
-          description: Invalid input
+          description: Invalid input or OTP format
           schema:
             additionalProperties:
               type: string
             type: object
         "401":
-          description: Invalid or expired OTP
+          description: Invalid, expired, or already used OTP
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Verify OTP and Login/Register
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify OTP
       tags:
       - Auth
 swagger: "2.0"

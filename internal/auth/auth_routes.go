@@ -36,7 +36,7 @@ func RegisterAuthRoutes(router *gin.RouterGroup, db *gorm.DB, appConfig *config.
 
 	// Authenticated routes (protected by auth middleware)
 	authProtected := router.Group("/auth")
-	authProtected.Use(middleware.AuthMiddleware(appConfig.JWT.AccessTokenSecret)) // Apply your auth middleware
+	authProtected.Use(middleware.AuthMiddleware(appConfig.JWT.AccessTokenSecret, config.DB))
 	{
 		authProtected.GET("/me", authController.GetProfile)
 		authProtected.PUT("/me", authController.UpdateProfile)

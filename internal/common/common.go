@@ -12,7 +12,6 @@ const (
 	ContextUserIDKey = "userID"      // Key to store user ID in context
 )
 
-// GetUserIDFromContext retrieves the authenticated user's ID from the Gin context.
 func GetUserIDFromContext(c *gin.Context) (uint, error) {
 	userIDInterface, exists := c.Get(ContextUserIDKey)
 	if !exists {
@@ -25,8 +24,6 @@ func GetUserIDFromContext(c *gin.Context) (uint, error) {
 	return userID, nil
 }
 
-// GetCurrentUser retrieves the authenticated user from the Gin context.
-// We'll need the User type as an interface{} since we can't import user package here
 func GetCurrentUserInterface(c *gin.Context) (interface{}, bool) {
 	userInterface, exists := c.Get(ContextUserKey)
 	if !exists {

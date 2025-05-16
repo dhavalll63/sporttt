@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -67,9 +68,7 @@ func (ac *AuthController) generateAndSaveTokens(c *gin.Context, userID uint) (st
 func (ac *AuthController) sendOTPToPhone(phone, otpCode string) error {
 	fmt.Printf("SIMULATING: Sending OTP %s to %s\n", otpCode, phone)
 	// Example: return ac.sms.Send(phone, fmt.Sprintf("Your OTP code is: %s", otpCode))
-	if ac.config.App.Environment == "test" { // Don't actually send in test
-		return nil
-	}
+
 	// Integrate with your SMS provider here
 	return nil
 }
@@ -77,10 +76,7 @@ func (ac *AuthController) sendOTPToPhone(phone, otpCode string) error {
 // sendEmail simulates sending an email. Replace with actual email service.
 func (ac *AuthController) sendEmail(to, subject, body string) error {
 	fmt.Printf("SIMULATING: Sending Email\nTo: %s\nSubject: %s\nBody: %s\n", to, subject, body)
-	// Example: return ac.mailer.Send(to, subject, body)
-	if ac.config.App.Environment == "test" { // Don't actually send in test
-		return nil
-	}
+
 	// Integrate with your Email provider here
 	return nil
 }
@@ -103,6 +99,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
+	// Check for existing users
 	if _, err := ac.repo.GetUserByEmail(req.Email); !errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
@@ -111,8 +108,10 @@ func (ac *AuthController) Register(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this phone number already exists"})
 		return
 	}
-	// Consider adding username uniqueness check if it's critical
-	// if _, err := ac.repo.GetUserByUsername(req.Username); !errors.Is(err, gorm.ErrRecordNotFound) { ... }
+	if _, err := ac.repo.GetUserByUsername(req.Username); !errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusConflict, gin.H{"error": "User with this username already exists"})
+		return
+	}
 
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
@@ -120,43 +119,68 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	userRole := DefaultUserRole
-	if req.Role != "" {
-		// You might want to validate if this role exists in your system
-		// role, err := ac.repo.GetRoleByName(req.Role)
-		// if err != nil {
-		//  c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role specified"})
-		//  return
-		// }
-		userRole = req.Role
-	}
+	emailVerifyToken := utils.GenerateRandomToken(32)
+	emailVerifyExpires := time.Now().Add(24 * time.Hour)
 
 	newUser := &user.User{
+		Name:          req.Name,
 		Username:      req.Username,
 		Email:         strings.ToLower(req.Email),
 		Password:      hashedPassword,
-		Role:          userRole,
 		Phone:         req.Phone,
-		PhoneVerified: false, // Typically phone is verified via OTP after registration
-		EmailVerified: false, // Email verified separately
+		PhoneVerified: false,
+		EmailVerified: false,
+		Verified:      false,
 		LastActive:    time.Now(),
+		VerifyToken:   emailVerifyToken,
+		VerifyExpires: &emailVerifyExpires,
 	}
 
-	emailVerifyToken := utils.GenerateRandomToken(32)
-	emailVerifyExpires := time.Now().Add(24 * time.Hour)
-	newUser.VerifyToken = emailVerifyToken
-	newUser.VerifyExpires = &emailVerifyExpires
+	// Set optional fields if provided
+	if req.Address != "" {
+		newUser.Address = req.Address
+	}
+	if req.City != "" {
+		newUser.City = req.City
+	}
+	if req.District != "" {
+		newUser.District = req.District
+	}
+	if req.State != "" {
+		newUser.State = req.State
+	}
+	if req.Country != "" {
+		newUser.Country = req.Country
+	}
+	if req.PostalCode != "" {
+		newUser.PostalCode = req.PostalCode
+	}
+	if req.Bio != "" {
+		newUser.Bio = req.Bio
+	}
+	if len(req.PreferredSports) > 0 {
+		newUser.PreferredSports = req.PreferredSports
+	}
+	if req.SocialMedia != nil {
+		newUser.SocialMedia = *req.SocialMedia
+	}
 
+	// Create user
 	if err := ac.repo.CreateUser(newUser); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User creation failed: " + err.Error()})
 		return
 	}
 
+	// Assign default role
+	if err := ac.repo.AssignRoleToUser(newUser.ID, DefaultUserRole); err != nil {
+		// Log error but don't fail registration
+		fmt.Printf("Failed to assign default role to user: %v\n", err)
+	}
+
 	// Send verification email
 	verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", ac.config.App.FrontendURL, emailVerifyToken)
-	emailBody := fmt.Sprintf("Hello %s, please verify your email by clicking on this link: %s", newUser.Username, verificationLink)
+	emailBody := fmt.Sprintf("Hello %s, please verify your email by clicking on this link: %s", newUser.Name, verificationLink)
 	if err := ac.sendEmail(newUser.Email, "Verify Your Email Address", emailBody); err != nil {
-		// Log error, but don't fail registration if email sending fails
 		fmt.Printf("Failed to send verification email to %s: %v\n", newUser.Email, err)
 	}
 
@@ -271,6 +295,321 @@ func (ac *AuthController) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"access_token": newAccessToken})
 }
 
+// @Summary      Get User Profile
+// @Description  Retrieves the profile of the currently authenticated user.
+// @Tags         Profile
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} UserResponse "User profile data"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      404 {object} map[string]string "User not found"
+// @Failure      500 {object} map[string]string "Internal server error"
+// @Router       /auth/me [get]
+func (ac *AuthController) GetProfile(c *gin.Context) {
+	userID, err := middleware.GetUserIDFromContext(c) // Assumes your middleware sets this
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
+		return
+	}
+
+	currentUser, err := ac.repo.GetUserByID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve profile: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, FilterUserRecord(currentUser))
+}
+
+// @Summary      Update User Profile
+// @Description  Updates the profile of the currently authenticated user.
+// @Tags         Profile
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        profileData body UpdateProfileRequest true "Profile data to update"
+// @Success      200 {object} UserResponse "Updated user profile data"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      404 {object} map[string]string "User not found"
+// @Failure      409 {object} map[string]string "Username already taken"
+// @Failure      500 {object} map[string]string "Internal server error"
+// @Router       /auth/me [put]
+func (ac *AuthController) UpdateProfile(c *gin.Context) {
+	userID, err := middleware.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
+		return
+	}
+
+	u, err := ac.repo.GetUserByID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		return
+	}
+
+	if req.Name != nil {
+		u.Name = *req.Name
+	}
+	if req.Username != nil {
+		existingUser, findErr := ac.repo.GetUserByUsername(*req.Username)
+		if findErr == nil && existingUser.ID != u.ID {
+			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken."})
+			return
+		}
+		u.Username = *req.Username
+	}
+	if req.Bio != nil {
+		u.Bio = *req.Bio
+	}
+	if req.Address != nil {
+		u.Address = *req.Address
+	}
+	if req.City != nil {
+		u.City = *req.City
+	}
+	if req.District != nil {
+		u.District = *req.District
+	}
+	if req.State != nil {
+		u.State = *req.State
+	}
+	if req.Country != nil {
+		u.Country = *req.Country
+	}
+	if req.PostalCode != nil {
+		u.PostalCode = *req.PostalCode
+	}
+	if req.PreferredSports != nil {
+		u.PreferredSports = req.PreferredSports
+	}
+	if req.SocialMedia != nil {
+		u.SocialMedia = *req.SocialMedia
+	}
+	if req.Coordinates != nil {
+		u.Coordinates = *req.Coordinates
+	}
+
+	u.LastActive = time.Now()
+
+	if err := ac.repo.UpdateUser(u); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update profile: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, FilterUserRecord(u))
+}
+
+// @Summary      Update Profile Image
+// @Description  Updates the profile image for the currently authenticated user.
+// @Tags         Profile
+// @Security     BearerAuth
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        image formData file true "Profile image file"
+// @Success      200 {object} map[string]string "Profile image updated successfully"
+// @Failure      400 {object} map[string]string "Invalid file or input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      500 {object} map[string]string "Failed to upload or save image path"
+// @Router       /auth/me/profile-image [put]
+func (ac *AuthController) UpdateProfileImage(c *gin.Context) {
+	userID, err := middleware.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
+		return
+	}
+
+	file, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required: " + err.Error()})
+		return
+	}
+
+	// Validate file type and size if necessary
+	// E.g., check file.Header.Get("Content-Type") and file.Size
+
+	u, err := ac.repo.GetUserByID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		return
+	}
+
+	// Generate a unique filename to prevent collisions
+	extension := filepath.Ext(file.Filename)
+	filename := fmt.Sprintf("user_%d_profile_%d%s", userID, time.Now().UnixNano(), extension)
+	uploadPath := filepath.Join(ac.config.App.UploadDir, "profiles", filename) // e.g., ./uploads/profiles/user_1_profile_timestamp.jpg
+
+	// Ensure directory exists
+	if err := utils.EnsureDir(filepath.Dir(uploadPath)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create upload directory: " + err.Error()})
+		return
+	}
+
+	if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded image: " + err.Error()})
+		return
+	}
+
+	// Store relative path or full URL depending on your setup
+	u.ProfileImage = "/uploads/profiles/" + filename // Path accessible by frontend
+	u.LastActive = time.Now()
+
+	if err := ac.repo.UpdateUser(u); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save profile image path to database: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Profile image updated successfully", "profile_image_url": u.ProfileImage})
+}
+
+// @Summary      Change Password
+// @Description  Allows an authenticated user to change their password.
+// @Tags         Profile
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        passwords body ChangePasswordRequest true "Old and new password details"
+// @Success      200 {object} map[string]string "Password changed successfully"
+// @Failure      400 {object} map[string]string "Invalid input or password mismatch"
+// @Failure      401 {object} map[string]string "Unauthorized or incorrect old password"
+// @Failure      500 {object} map[string]string "Failed to change password"
+// @Router       /auth/change-password [post]
+func (ac *AuthController) ChangePassword(c *gin.Context) {
+	userID, err := middleware.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
+		return
+	}
+
+	u, err := ac.repo.GetUserByID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		return
+	}
+
+	if !utils.CheckPassword(u.Password, req.OldPassword) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect old password."})
+		return
+	}
+
+	if req.OldPassword == req.NewPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "New password cannot be the same as the old password."})
+		return
+	}
+
+	newHashedPassword, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
+		return
+	}
+
+	u.Password = newHashedPassword
+	u.LastActive = time.Now()
+	// Optionally: Invalidate all other active sessions/refresh tokens for this user
+	// if err := ac.repo.InvalidateAllRefreshTokensForUser(u.ID); err != nil { ... }
+
+	if err := ac.repo.UpdateUser(u); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change password: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully."})
+}
+
+// @Summary      Logout User
+// @Description  Invalidates the user's refresh token.
+// @Tags         Auth
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} map[string]string "Logged out successfully"
+// @Failure      400 {object} map[string]string "Refresh token missing or invalid"
+// @Failure      500 {object} map[string]string "Failed to logout"
+// @Router       /auth/logout [post]
+// @Summary      Logout User
+// @Description  Invalidates the user's current session and refresh tokens (optionally all sessions)
+// @Tags         Auth
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body LogoutRequest false "Logout options"
+// @Success      200 {object} map[string]string "Logged out successfully"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      500 {object} map[string]string "Failed to logout"
+// @Router       /auth/logout [post]
+func (ac *AuthController) Logout(c *gin.Context) {
+	// Get user ID from context (set by your auth middleware)
+	userID, err := middleware.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
+		return
+	}
+
+	var req LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil && err != io.EOF {
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
+		return
+	}
+
+	// Try to get refresh token from different sources
+	refreshToken := ""
+	if req.RefreshToken != "" {
+		refreshToken = req.RefreshToken
+	} else {
+		// Check cookie if no token in request body
+		refreshTokenCookie, _ := c.Cookie("refresh_token")
+		if refreshTokenCookie != "" {
+			refreshToken = refreshTokenCookie
+		}
+	}
+
+	// Invalidate the specific refresh token if provided
+	if refreshToken != "" {
+		if err := ac.repo.InvalidateRefreshToken(refreshToken); err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate refresh token: " + err.Error()})
+				return
+			}
+			// Token not found is acceptable (maybe already expired/revoked)
+		}
+	}
+
+	// If requested, invalidate ALL user's refresh tokens
+	if req.InvalidateAllSessions {
+		if err := ac.repo.InvalidateAllRefreshTokensForUser(userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate all sessions: " + err.Error()})
+			return
+		}
+	}
+
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true) // secure flag true in production
+	c.SetCookie("access_token", "", -1, "/", "", false, true)  // if you use access token cookies
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":                  "Logged out successfully",
+		"all_sessions_invalidated": req.InvalidateAllSessions,
+	})
+}
+
 // @Summary      Request OTP
 // @Description  Generate and send an OTP to the user's phone number for verification or login.
 // @Tags         Auth
@@ -313,7 +652,7 @@ func (ac *AuthController) RequestOTP(c *gin.Context) {
 		}
 	}
 
-	otpCode := utils.GenerateOTP(6) // Generate a 6-digit OTP
+	otpCode := utils.GenerateOTP() // Generate a 6-digit OTP
 	otp := &OTP{
 		Phone:     req.Phone,
 		Code:      otpCode,
@@ -360,7 +699,7 @@ func (ac *AuthController) VerifyOTP(c *gin.Context) {
 		return
 	}
 
-	otp, err := ac.repo.GetOTP(req.Phone, req.Code) // GetOTP should check expiry and not verified
+	otp, err := ac.repo.GetOTP(req.Phone, req.Code)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid, expired, or already used OTP."})
 		return
@@ -376,37 +715,34 @@ func (ac *AuthController) VerifyOTP(c *gin.Context) {
 	u, err = ac.repo.GetUserByPhone(req.Phone)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		// Auto-register user
+		// Auto-register user with minimal information
 		newUser := &user.User{
-			Username:      "user_" + strings.ReplaceAll(req.Phone, "+", ""),                                  // Generate a simple unique username
-			Email:         fmt.Sprintf("%s@example.phone.generated", strings.ReplaceAll(req.Phone, "+", "")), // Placeholder email
+			Name:          "User_" + strings.ReplaceAll(req.Phone, "+", ""),
+			Username:      "user_" + strings.ReplaceAll(req.Phone, "+", ""),
 			Phone:         req.Phone,
-			Role:          DefaultUserRole,
 			PhoneVerified: true,
-			Verified:      true, // Phone is the primary verification here
+			Verified:      true,
 			LastActive:    time.Now(),
 		}
-		// Since password is not provided, generate a random one or leave it empty
-		// For security, it's better if OTP login users are guided to set a password later if they want email/password login
-		// Or, don't set a password, making their account OTP-only until they add one.
-		// randomPassword := utils.GenerateRandomToken(16)
-		// hashedPassword, _ := utils.HashPassword(randomPassword)
-		// newUser.Password = hashedPassword
 
 		if errCreate := ac.repo.CreateUser(newUser); errCreate != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user: " + errCreate.Error()})
 			return
 		}
+
+		// Assign default role
+		if errRole := ac.repo.AssignRoleToUser(newUser.ID, DefaultUserRole); errRole != nil {
+			fmt.Printf("Failed to assign default role to user: %v\n", errRole)
+		}
+
 		u = newUser
 	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
 		return
 	} else {
-		// User exists, update phone verified status and general verified status
+		// User exists, update verification status
 		u.PhoneVerified = true
-		if u.EmailVerified { // If email was also verified, main 'Verified' becomes true
-			u.Verified = true
-		}
+		u.Verified = u.EmailVerified // Verified becomes true if email was already verified
 		u.LastActive = time.Now()
 		if errUpdate := ac.repo.UpdateUser(u); errUpdate != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user: " + errUpdate.Error()})
@@ -615,293 +951,4 @@ func (ac *AuthController) ResendVerificationEmail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Verification email has been resent."})
-}
-
-// @Summary      Get User Profile
-// @Description  Retrieves the profile of the currently authenticated user.
-// @Tags         Profile
-// @Security     BearerAuth
-// @Produce      json
-// @Success      200 {object} UserResponse "User profile data"
-// @Failure      401 {object} map[string]string "Unauthorized"
-// @Failure      404 {object} map[string]string "User not found"
-// @Failure      500 {object} map[string]string "Internal server error"
-// @Router       /auth/me [get]
-func (ac *AuthController) GetProfile(c *gin.Context) {
-	userID, err := middleware.GetUserIDFromContext(c) // Assumes your middleware sets this
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
-		return
-	}
-
-	currentUser, err := ac.repo.GetUserByID(userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve profile: " + err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, FilterUserRecord(currentUser))
-}
-
-// @Summary      Update User Profile
-// @Description  Updates the profile of the currently authenticated user.
-// @Tags         Profile
-// @Security     BearerAuth
-// @Accept       json
-// @Produce      json
-// @Param        profileData body UpdateProfileRequest true "Profile data to update"
-// @Success      200 {object} UserResponse "Updated user profile data"
-// @Failure      400 {object} map[string]string "Invalid input"
-// @Failure      401 {object} map[string]string "Unauthorized"
-// @Failure      404 {object} map[string]string "User not found"
-// @Failure      409 {object} map[string]string "Username already taken"
-// @Failure      500 {object} map[string]string "Internal server error"
-// @Router       /auth/me [put]
-func (ac *AuthController) UpdateProfile(c *gin.Context) {
-	userID, err := middleware.GetUserIDFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
-		return
-	}
-
-	var req UpdateProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
-		return
-	}
-
-	u, err := ac.repo.GetUserByID(userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
-		return
-	}
-
-	if req.Name != nil {
-		u.Name = *req.Name
-	}
-	if req.Username != nil {
-		// Check if new username is taken by another user
-		existingUser, findErr := ac.repo.GetUserByEmail(*req.Username) // Assuming GetUserByUsername exists
-		if findErr == nil && existingUser.ID != u.ID {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken."})
-			return
-		}
-		u.Username = *req.Username
-	}
-	if req.Bio != nil {
-		u.Bio = *req.Bio
-	}
-	if req.Address != nil {
-		u.Address = *req.Address
-	}
-	if req.City != nil {
-		u.City = *req.City
-	}
-	if req.District != nil {
-		u.District = *req.District
-	}
-	if req.State != nil {
-		u.State = *req.State
-	}
-	if req.Country != nil {
-		u.Country = *req.Country
-	}
-	if req.PostalCode != nil {
-		u.PostalCode = *req.PostalCode
-	}
-	if req.PreferredSports != nil {
-		u.PreferredSports = *req.PreferredSports // Assuming JSON string
-	}
-	if req.SocialMedia != nil {
-		u.SocialMedia = *req.SocialMedia // Assuming JSON string
-	}
-	u.LastActive = time.Now()
-
-	if err := ac.repo.UpdateUser(u); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update profile: " + err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, FilterUserRecord(u))
-}
-
-// @Summary      Update Profile Image
-// @Description  Updates the profile image for the currently authenticated user.
-// @Tags         Profile
-// @Security     BearerAuth
-// @Accept       multipart/form-data
-// @Produce      json
-// @Param        image formData file true "Profile image file"
-// @Success      200 {object} map[string]string "Profile image updated successfully"
-// @Failure      400 {object} map[string]string "Invalid file or input"
-// @Failure      401 {object} map[string]string "Unauthorized"
-// @Failure      500 {object} map[string]string "Failed to upload or save image path"
-// @Router       /auth/me/profile-image [put]
-func (ac *AuthController) UpdateProfileImage(c *gin.Context) {
-	userID, err := middleware.GetUserIDFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
-		return
-	}
-
-	file, err := c.FormFile("image")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required: " + err.Error()})
-		return
-	}
-
-	// Validate file type and size if necessary
-	// E.g., check file.Header.Get("Content-Type") and file.Size
-
-	u, err := ac.repo.GetUserByID(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
-		return
-	}
-
-	// Generate a unique filename to prevent collisions
-	extension := filepath.Ext(file.Filename)
-	filename := fmt.Sprintf("user_%d_profile_%d%s", userID, time.Now().UnixNano(), extension)
-	uploadPath := filepath.Join(ac.config.App.UploadDir, "profiles", filename) // e.g., ./uploads/profiles/user_1_profile_timestamp.jpg
-
-	// Ensure directory exists
-	if err := utils.EnsureDir(filepath.Dir(uploadPath)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create upload directory: " + err.Error()})
-		return
-	}
-
-	if err := c.SaveUploadedFile(file, uploadPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded image: " + err.Error()})
-		return
-	}
-
-	// Store relative path or full URL depending on your setup
-	u.ProfileImage = "/uploads/profiles/" + filename // Path accessible by frontend
-	u.LastActive = time.Now()
-
-	if err := ac.repo.UpdateUser(u); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save profile image path to database: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Profile image updated successfully", "profile_image_url": u.ProfileImage})
-}
-
-// @Summary      Change Password
-// @Description  Allows an authenticated user to change their password.
-// @Tags         Profile
-// @Security     BearerAuth
-// @Accept       json
-// @Produce      json
-// @Param        passwords body ChangePasswordRequest true "Old and new password details"
-// @Success      200 {object} map[string]string "Password changed successfully"
-// @Failure      400 {object} map[string]string "Invalid input or password mismatch"
-// @Failure      401 {object} map[string]string "Unauthorized or incorrect old password"
-// @Failure      500 {object} map[string]string "Failed to change password"
-// @Router       /auth/change-password [post]
-func (ac *AuthController) ChangePassword(c *gin.Context) {
-	userID, err := middleware.GetUserIDFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: " + err.Error()})
-		return
-	}
-
-	var req ChangePasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
-		return
-	}
-
-	u, err := ac.repo.GetUserByID(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
-		return
-	}
-
-	if !utils.CheckPassword(u.Password, req.OldPassword) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect old password."})
-		return
-	}
-
-	if req.OldPassword == req.NewPassword {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "New password cannot be the same as the old password."})
-		return
-	}
-
-	newHashedPassword, err := utils.HashPassword(req.NewPassword)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
-		return
-	}
-
-	u.Password = newHashedPassword
-	u.LastActive = time.Now()
-	// Optionally: Invalidate all other active sessions/refresh tokens for this user
-	// if err := ac.repo.InvalidateAllRefreshTokensForUser(u.ID); err != nil { ... }
-
-	if err := ac.repo.UpdateUser(u); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change password: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully."})
-}
-
-// @Summary      Logout User
-// @Description  Invalidates the user's refresh token.
-// @Tags         Auth
-// @Security     BearerAuth
-// @Produce      json
-// @Success      200 {object} map[string]string "Logged out successfully"
-// @Failure      400 {object} map[string]string "Refresh token missing or invalid"
-// @Failure      500 {object} map[string]string "Failed to logout"
-// @Router       /auth/logout [post]
-func (ac *AuthController) Logout(c *gin.Context) {
-	// Assuming refresh token is sent in request body or as a cookie
-	// If it's in a cookie, extract it. For this example, let's assume it's in the body (like RefreshTokenRequest)
-	// Or, better, the Bearer token (access token) is used to identify the user, and we invalidate their *current* refresh token.
-	// For simplicity, let's expect a refresh token to be explicitly provided for logout.
-
-	var req RefreshTokenRequest // Re-use if logout requires the refresh token
-	if err := c.ShouldBindJSON(&req); err == nil && req.RefreshToken != "" {
-		// If refresh token is provided, invalidate it
-		err := ac.repo.InvalidateRefreshToken(req.RefreshToken) // This should mark as revoked
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate refresh token: " + err.Error()})
-			return
-		}
-	} else {
-		// If not provided, maybe try to get from cookie (if your app uses refresh token cookies)
-		refreshTokenCookie, _ := c.Cookie("refresh_token")
-		if refreshTokenCookie != "" {
-			if err := ac.repo.InvalidateRefreshToken(refreshTokenCookie); err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate refresh token from cookie: " + err.Error()})
-				return
-			}
-		} else {
-			// If no refresh token is found to invalidate, and logout is an authenticated route,
-			// the client should simply discard its access token.
-			// A server-side action is primarily for invalidating refresh tokens.
-			// If you store session IDs or have other server-side session state, clear it here.
-		}
-	}
-
-	// Clear cookie if it was set
-	c.SetCookie("refresh_token", "", -1, "/", "", ac.config.App.Environment != "development", true) // secure true in prod
-
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully."})
-}
-
-// Helper to get pointer to time.Time, useful for optional time fields in GORM
-func ptrTime(t time.Time) *time.Time {
-	if t.IsZero() {
-		return nil
-	}
-	return &t
 }

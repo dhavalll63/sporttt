@@ -4,6 +4,7 @@ import (
 	"mime/multipart"
 	"time"
 
+	"github.com/DhavalSuthar-24/miow/internal/models"
 	"github.com/DhavalSuthar-24/miow/internal/user"
 	"gorm.io/gorm"
 )
@@ -15,14 +16,6 @@ type OTP struct {
 	ExpiresAt time.Time `gorm:"not null"`
 	Verified  bool      `gorm:"default:false"`
 	Attempt   int       `gorm:"default:0"`
-}
-
-type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=30" example:"john_doe"`
-	Email    string `json:"email" binding:"required,email" example:"john@example.com"`
-	Password string `json:"password" binding:"required,min=8,max=72" example:"password123"`
-	Phone    string `json:"phone" binding:"required,e164" example:"+919876543210"`                // e164 for international phone number format
-	Role     string `json:"role" binding:"omitempty,oneof=player admin manager" example:"player"` // Specify allowed roles if fixed
 }
 
 type LoginRequest struct {
@@ -62,17 +55,18 @@ type ResendVerificationRequest struct {
 }
 
 type UpdateProfileRequest struct {
-	Name            *string `json:"name,omitempty" example:"John Doe"`
-	Username        *string `json:"username,omitempty" binding:"omitempty,min=3,max=30" example:"john_doe_new"`
-	Bio             *string `json:"bio,omitempty" example:"Avid cricketer and developer."`
-	Address         *string `json:"address,omitempty" example:"123 Main St"`
-	City            *string `json:"city,omitempty" example:"Mumbai"`
-	District        *string `json:"district,omitempty" example:"Mumbai Suburban"`
-	State           *string `json:"state,omitempty" example:"Maharashtra"`
-	Country         *string `json:"country,omitempty" example:"India"`
-	PostalCode      *string `json:"postal_code,omitempty" example:"400001"`
-	PreferredSports *string `json:"preferred_sports,omitempty" binding:"omitempty,json" example:"[\"cricket\",\"football\"]"`
-	SocialMedia     *string `json:"social_media,omitempty" binding:"omitempty,json" example:"{\"twitter\":\"@johndoe\"}"`
+	Name            *string             `json:"name,omitempty" example:"John Doe"`
+	Username        *string             `json:"username,omitempty" binding:"omitempty,min=3,max=30" example:"john_doe_new"`
+	Bio             *string             `json:"bio,omitempty" example:"Avid cricketer and developer."`
+	Address         *string             `json:"address,omitempty" example:"123 Main St"`
+	City            *string             `json:"city,omitempty" example:"Mumbai"`
+	District        *string             `json:"district,omitempty" example:"Mumbai Suburban"`
+	State           *string             `json:"state,omitempty" example:"Maharashtra"`
+	Country         *string             `json:"country,omitempty" example:"India"`
+	PostalCode      *string             `json:"postal_code,omitempty" example:"400001"`
+	PreferredSports []string            `json:"preferred_sports,omitempty"`
+	Coordinates     *models.Coordinates `json:"coordinates,omitempty"`
+	SocialMedia     *models.SocialMedia `json:"social_media,omitempty"`
 }
 
 type UpdateProfileImageRequest struct {
@@ -91,56 +85,84 @@ type AuthResponse struct {
 	User         UserResponse `json:"user"`
 }
 
-type UserResponse struct {
-	ID              uint      `json:"id"`
-	Name            string    `json:"name"`
-	Username        string    `json:"username"`
-	Email           string    `json:"email"`
-	Role            string    `json:"role"`
-	Phone           string    `json:"phone"`
-	PhoneVerified   bool      `json:"phone_verified"`
-	ProfileImage    string    `json:"profile_image"`
-	EmailVerified   bool      `json:"email_verified"`
-	Verified        bool      `json:"verified"`
-	Address         string    `json:"address,omitempty"`
-	City            string    `json:"city,omitempty"`
-	District        string    `json:"district,omitempty"`
-	State           string    `json:"state,omitempty"`
-	Country         string    `json:"country,omitempty"`
-	PostalCode      string    `json:"postal_code,omitempty"`
-	Coordinates     string    `json:"coordinates,omitempty"` // Assuming JSON string
-	Bio             string    `json:"bio,omitempty"`
-	LastActive      time.Time `json:"last_active,omitempty"`
-	PreferredSports string    `json:"preferred_sports,omitempty"` // Assuming JSON string
-	SocialMedia     string    `json:"social_media,omitempty"`     // Assuming JSON string
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+type RegisterRequest struct {
+	Name            string              `json:"name" binding:"required"`
+	Username        string              `json:"username" binding:"required"`
+	Email           string              `json:"email" binding:"required,email"`
+	Password        string              `json:"password" binding:"required,min=8"`
+	Phone           string              `json:"phone" binding:"required"`
+	Address         string              `json:"address,omitempty"`
+	City            string              `json:"city,omitempty"`
+	District        string              `json:"district,omitempty"`
+	State           string              `json:"state,omitempty"`
+	Country         string              `json:"country,omitempty"`
+	PostalCode      string              `json:"postal_code,omitempty"`
+	Bio             string              `json:"bio,omitempty"`
+	PreferredSports []string            `json:"preferred_sports,omitempty"`
+	SocialMedia     *models.SocialMedia `json:"social_media,omitempty"`
+	Coordinates     *models.Coordinates `json:"coordinates,omitempty"`
 }
 
-func FilterUserRecord(u *user.User) UserResponse {
+type UserResponse struct {
+	ID              uint               `json:"id"`
+	Name            string             `json:"name"`
+	Username        string             `json:"username"`
+	Email           string             `json:"email"`
+	Phone           string             `json:"phone"`
+	PhoneVerified   bool               `json:"phone_verified"`
+	ProfileImage    string             `json:"profile_image"`
+	EmailVerified   bool               `json:"email_verified"`
+	Verified        bool               `json:"verified"`
+	Address         string             `json:"address"`
+	City            string             `json:"city"`
+	District        string             `json:"district"`
+	State           string             `json:"state"`
+	Country         string             `json:"country"`
+	PostalCode      string             `json:"postal_code"`
+	Bio             string             `json:"bio"`
+	LastActive      time.Time          `json:"last_active"`
+	Coordinates     models.Coordinates `json:"coordinates"`
+	PreferredSports []string           `json:"preferred_sports"`
+	SocialMedia     models.SocialMedia `json:"social_media"`
+	Roles           []string           `json:"roles"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+}
+
+type LogoutRequest struct {
+	RefreshToken          string `json:"refresh_token"`           // Optional: specific token to invalidate
+	InvalidateAllSessions bool   `json:"invalidate_all_sessions"` // If true, invalidate all user's sessions
+}
+
+func FilterUserRecord(user *user.User) UserResponse {
+	var roles []string
+	for _, userRole := range user.UserRoles {
+		roles = append(roles, userRole.Role.Name)
+	}
+
 	return UserResponse{
-		ID:              u.ID,
-		Name:            u.Name,
-		Username:        u.Username,
-		Email:           u.Email,
-		Role:            u.Role,
-		Phone:           u.Phone,
-		PhoneVerified:   u.PhoneVerified,
-		ProfileImage:    u.ProfileImage,
-		EmailVerified:   u.EmailVerified,
-		Verified:        u.Verified,
-		Address:         u.Address,
-		City:            u.City,
-		District:        u.District,
-		State:           u.State,
-		Country:         u.Country,
-		PostalCode:      u.PostalCode,
-		Coordinates:     u.Coordinates, // Ensure this is a string or handle conversion
-		Bio:             u.Bio,
-		LastActive:      u.LastActive,
-		PreferredSports: u.PreferredSports, // Ensure this is a string or handle conversion
-		SocialMedia:     u.SocialMedia,     // Ensure this is a string or handle conversion
-		CreatedAt:       u.CreatedAt,
-		UpdatedAt:       u.UpdatedAt,
+		ID:              user.ID,
+		Name:            user.Name,
+		Username:        user.Username,
+		Email:           user.Email,
+		Phone:           user.Phone,
+		PhoneVerified:   user.PhoneVerified,
+		ProfileImage:    user.ProfileImage,
+		EmailVerified:   user.EmailVerified,
+		Verified:        user.Verified,
+		Address:         user.Address,
+		City:            user.City,
+		District:        user.District,
+		State:           user.State,
+		Country:         user.Country,
+		PostalCode:      user.PostalCode,
+		Bio:             user.Bio,
+		LastActive:      user.LastActive,
+		Coordinates:     user.Coordinates,
+		PreferredSports: user.PreferredSports,
+		SocialMedia:     user.SocialMedia,
+		Roles:           roles,
+		CreatedAt:       user.CreatedAt,
+		UpdatedAt:       user.UpdatedAt,
 	}
 }

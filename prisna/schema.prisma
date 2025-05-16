@@ -1,0 +1,146 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int              @id @default(autoincrement())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  name            String
+  username        String           @unique
+  email           String           @unique
+  password        String
+  phone           String           @unique
+  phoneVerified   Boolean          @default(false)
+  profileImage    String?
+  emailVerified   Boolean          @default(false)
+  verified        Boolean          @default(false)
+  address         String?
+  city            String?
+  district        String?
+  state           String?
+  country         String?
+  postalCode      String?
+  bio             String?
+  lastActive      DateTime?
+  resetToken      String?
+  resetExpires    DateTime?
+  verifyToken     String?
+  verifyExpires   DateTime?
+  coordinates     Json?            @default("{}")
+  preferredSports Json?            @default("[]")
+  socialMedia     Json?            @default("{}")
+  
+  // Relationships
+  userRoles       UserRole[]
+  refreshTokens   RefreshToken[]
+  userSkills     UserSkill[]
+  sports         UserSport[]
+}
+
+model Role {
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  name        String    @unique
+  description String?
+  
+  // Relationships
+  userRoles   UserRole[]
+}
+
+model UserRole {
+  id        Int     @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+  role      Role    @relation(fields: [roleId], references: [id])
+  roleId    Int
+}
+
+model RefreshToken {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  token       String   @unique
+  deviceId    String   @db.VarChar(255)
+  deviceName  String   @db.VarChar(255)
+  ipAddress   String   @db.VarChar(45)
+  userAgent   String   @db.VarChar(512)
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  lastUsedAt  DateTime?
+  
+  // Relationships
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+}
+
+model Sport {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  name          String    @unique
+  description   String?
+  rules         Json?
+  icon          String?
+  positions     Json?
+  equipment     Json?
+  
+  // Relationships
+  skills       Skill[]
+  userSports   UserSport[]
+}
+
+model Skill {
+  id          Int     @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  description String?
+  weight      Float   @default(1.0)
+  
+  // Relationships
+  sport       Sport   @relation(fields: [sportId], references: [id])
+  sportId     Int
+  
+  @@unique([name, sportId], name: "idx_skill_sport")
+}
+
+model UserSport {
+  id        Int     @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  position  String?
+  level     String?
+  
+  // Relationships
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+  sport     Sport   @relation(fields: [sportId], references: [id])
+  sportId   Int
+}
+
+model UserSkill {
+  id        Int     @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  level     String?
+  
+  // Relationships
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+
+  skillId   Int
+
+  sportId   Int
+}

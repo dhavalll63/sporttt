@@ -1,80 +1,56 @@
-// pkg/token/token.go
 package token
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5" // Using v5
+	"github.com/golang-jwt/jwt/v4"
 )
 
-// Claims defines the structure of the JWT claims your application uses.
-type Claims struct {
-	UserID uint   `json:"user_id"`
-	Role   string `json:"role,omitempty"` // Role can be included in JWT for quick checks, but DB is source of truth
-	jwt.RegisteredClaims
+func GenerateJWT(userID uint, secret string, expiryMinutes int) (string, error) {
+
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp":     time.Now().Add(time.Minute * time.Duration(expiryMinutes)).Unix(),
+		"iat":     time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
 }
 
-// ValidateJWT parses, validates, and returns claims from a JWT string.
-func ValidateJWT(tokenString string, secretKey string) (*Claims, error) {
-	if tokenString == "" {
-		return nil, errors.New("token string is empty")
-	}
-	if secretKey == "" {
-		return nil, errors.New("jwt secret key is empty")
+func GenerateRefreshToken(userID uint, secret string, expiryDays int) (string, error) {
+
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp":     time.Now().AddDate(0, 0, expiryDays).Unix(),
+		"iat":     time.Now().Unix(),
+		"type":    "refresh",
 	}
 
-	claims := &Claims{}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+func ValidateToken(tokenString string, secret string) (*jwt.Token, error) {
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(secretKey), nil
+		return []byte(secret), nil
 	})
-
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errors.New("token has expired")
-		}
-		if errors.Is(err, jwt.ErrTokenNotValidYet) {
-			return nil, errors.New("token is not yet valid")
-		}
-		if errors.Is(err, jwt.ErrSignatureInvalid) {
-			return nil, errors.New("token signature is invalid")
-		}
-		return nil, fmt.Errorf("could not parse token: %w", err)
-	}
-
-	if !token.Valid {
-		return nil, errors.New("token is invalid")
-	}
-
-	if claims.UserID == 0 { // Basic validation for your custom claim
-		return nil, errors.New("user_id claim is missing or zero")
-	}
-
-	// Check 'exp' claim for expiry, which ParseWithClaims should do, but an explicit check is fine.
-	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
-		return nil, errors.New("token has expired (checked manually)")
-	}
-
-	return claims, nil
 }
 
-// GenerateJWT (Example you might already have or a similar one)
-func GenerateJWT(userID uint, userRole string, secretKey string, expiryMinutes int) (string, error) {
-	expirationTime := time.Now().Add(time.Duration(expiryMinutes) * time.Minute)
-	claims := &Claims{
-		UserID: userID,
-		Role:   userRole, // Optionally include role
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "your-app-name", // Optional
-		},
+func ExtractUserID(token *jwt.Token) (uint, error) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, fmt.Errorf("invalid token claims")
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secretKey))
+
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("user ID not found in token")
+	}
+
+	return uint(userID), nil
 }

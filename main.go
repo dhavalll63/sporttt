@@ -2,10 +2,9 @@ package main
 
 import (
 	"log"
-	// "os" // No longer needed for PORT here if using config.GetConfig().App.Port
 
 	"github.com/DhavalSuthar-24/miow/config"
-	_ "github.com/DhavalSuthar-24/miow/docs" // For Swagger docs
+	_ "github.com/DhavalSuthar-24/miow/docs"
 	"github.com/DhavalSuthar-24/miow/internal/auth"
 	"github.com/DhavalSuthar-24/miow/internal/sport"
 	"github.com/DhavalSuthar-24/miow/internal/user"
@@ -16,21 +15,18 @@ import (
 // @title MiowNation REST API(-_-)
 // @version 1.0
 // @description This is a sample server for demonstrating Swagger with Gin.
-// @host localhost:8088  // Consider making this dynamic or updating based on config
+// @host localhost:8088
 // @BasePath /api
 func main() {
-	// Initialize configuration and database connection
 	if err := config.Initialize(); err != nil {
 		log.Fatalf("Failed to initialize application: %v", err)
 	}
 
-	// Now you can access the global config.DB or config.GetConfig()
-	cfg := config.GetConfig() // Get the loaded configuration
+	cfg := config.GetConfig()
 
-	// AutoMigrate using the global config.DB
 	err := config.DB.AutoMigrate(
 		&user.User{}, &user.Role{}, &auth.OTP{},
-		&sport.Sport{}, &sport.UserSport{},
+		&sport.Sport{}, &sport.UserSport{}, &sport.Skill{},
 		&venue.Venue{}, &venue.Ground{}, &venue.Booking{},
 		&user.RefreshToken{},
 	)
@@ -39,7 +35,7 @@ func main() {
 	}
 	log.Println("AutoMigrate successful")
 
-	r := routes.SetupRoutes() // SetupRoutes will now internally call config.GetConfig()
+	r := routes.SetupRoutes()
 
 	// Use port from loaded configuration
 	log.Printf("Starting server on port %s in %s mode\n", cfg.App.Port, cfg.App.Env)
