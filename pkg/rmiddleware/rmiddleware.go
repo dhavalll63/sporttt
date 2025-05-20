@@ -82,3 +82,6 @@ func PlayerMiddleware() gin.HandlerFunc {
 func CoachOrAdminMiddleware() gin.HandlerFunc {
 	return RoleMiddleware("coach", "admin")
 }
+func VenueManagerhOrAdminMiddleware() gin.HandlerFunc {
+	return RoleMiddleware("venue_manager", "admin")
+}

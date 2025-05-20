@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/DhavalSuthar-24/miow/config" // Import the config package
 	"github.com/DhavalSuthar-24/miow/internal/auth"
+	"github.com/DhavalSuthar-24/miow/internal/sport"
+	"github.com/DhavalSuthar-24/miow/internal/team"
 )
 
 func SetupRoutes() *gin.Engine {
@@ -65,6 +68,8 @@ func SetupRoutes() *gin.Engine {
 
 	// Pass dbInstance and cfg to RegisterAuthRoutes
 	auth.RegisterAuthRoutes(api, dbInstance, cfg)
+	sport.RegisterSportRoutes(api, dbInstance, cfg, os.Getenv("JWT_ACCESS_TOKEN_SECRET"))
+	team.TeamRoutes(api, dbInstance, cfg, os.Getenv("JWT_ACCESS_TOKEN_SECRET"))
 
 	return r
 }

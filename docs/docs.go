@@ -15,6 +15,405 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/bookings": {
+            "get": {
+                "description": "Retrieves all bookings made by the current user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookings"
+                ],
+                "summary": "Get user's bookings",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user's bookings",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new booking for a specific ground/court",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookings"
+                ],
+                "summary": "Create a new booking",
+                "parameters": [
+                    {
+                        "description": "Booking details",
+                        "name": "booking",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.CreateBookingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Booking created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Ground not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Time slot not available",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/bookings/{booking_id}": {
+            "get": {
+                "description": "Retrieves details of a specific booking",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookings"
+                ],
+                "summary": "Get booking details",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Booking ID",
+                        "name": "booking_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Booking details",
+                        "schema": {
+                            "$ref": "#/definitions/venue.Booking"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Booking not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Cancels a specific booking and releases the time slot",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookings"
+                ],
+                "summary": "Cancel a booking",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Booking ID",
+                        "name": "booking_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Booking cancelled successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Booking not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Cannot cancel booking",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/venue-manager/bookings/{booking_id}/status": {
+            "put": {
+                "description": "Updates the status of a specific booking (confirmed, rejected, cancelled, completed)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Update booking status",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Booking ID",
+                        "name": "booking_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New status",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.UpdateBookingStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Booking not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/venue-manager/{venue_id}/bookings": {
+            "get": {
+                "description": "Retrieves all bookings for a venue with pagination and optional filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Get bookings for a specific venue",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending, confirmed, cancelled, completed, rejected)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by date (YYYY-MM-DD format)",
+                        "name": "date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by court ID",
+                        "name": "court_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of bookings and pagination metadata",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/change-password": {
             "post": {
                 "security": [
@@ -225,7 +624,10 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Invalidates the user's refresh token.",
+                "description": "Invalidates the user's current session and refresh tokens (optionally all sessions)",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -233,6 +635,16 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Logout User",
+                "parameters": [
+                    {
+                        "description": "Logout options",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/auth.LogoutRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Logged out successfully",
@@ -244,7 +656,16 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Refresh token missing or invalid",
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -913,6 +1334,1812 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/manager/venues": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new venue with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Create a new venue",
+                "parameters": [
+                    {
+                        "description": "Venue information",
+                        "name": "venue",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.VenueInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Venue created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/venue.Venue"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manager/venues/{venue_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing venue's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Update venue",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated venue information",
+                        "name": "venue",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.VenueInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Venue updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/venue.Venue"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete an existing venue and all its associated data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Delete venue",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Venue deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid venue ID",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manager/venues/{venue_id}/courts": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Add a new court to an existing venue",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Add court to venue",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Court information",
+                        "name": "court",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.CourtInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Court added successfully",
+                        "schema": {
+                            "$ref": "#/definitions/venue.Ground"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manager/venues/{venue_id}/courts/{court_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing court's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Update court",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Court ID",
+                        "name": "court_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated court information",
+                        "name": "court",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.CourtInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Court updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/venue.Ground"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Court or venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete an existing court from a venue",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Delete court",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Court ID",
+                        "name": "court_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Court deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input or court doesn't belong to venue",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Court or venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manager/venues/{venue_id}/timeslots": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create one or more time slots for a venue",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Create time slots",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Time slot information",
+                        "name": "timeSlots",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/venue.TimeSlotInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Time slots created successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/venue.TimeSlot"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Time slot conflict",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manager/venues/{venue_id}/timeslots/auto": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Generate time slots automatically for a venue based on specified parameters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Generate time slots automatically",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Auto time slot generation parameters",
+                        "name": "autoSlots",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.AutoTimeSlotInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Time slots created successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/venue.TimeSlot"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Time slot conflict",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manager/venues/{venue_id}/timeslots/{timeslot_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing time slot's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Update time slot",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Time Slot ID",
+                        "name": "timeslot_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated time slot information",
+                        "name": "timeSlot",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/venue.TimeSlotInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Time slot updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/venue.TimeSlot"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Time slot or venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Time slot conflict",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete an existing time slot",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Delete time slot",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Time Slot ID",
+                        "name": "timeslot_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Time slot deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input or time slot doesn't belong to venue",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - not the venue manager",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Time slot or venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Cannot delete a booked time slot",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/skills/{skill_id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin can update an existing skill's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Skills"
+                ],
+                "summary": "Update a skill",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Skill ID",
+                        "name": "skill_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Skill update request",
+                        "name": "skill",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sport.UpdateSkillRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.Skill"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or bad request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Skill not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Skill with this name already exists for its sport",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin can delete a skill",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Skills"
+                ],
+                "summary": "Delete a skill",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Skill ID",
+                        "name": "skill_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Skill deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/responses.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid skill ID",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Skill not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sports": {
+            "get": {
+                "description": "Get a list of all available sports with optional filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sports"
+                ],
+                "summary": "Get all sports",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of items per page",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term for name or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status (admin only)",
+                        "name": "is_active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sport.Sport"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin can create a new sport",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sports"
+                ],
+                "summary": "Create a new sport",
+                "parameters": [
+                    {
+                        "description": "Sport creation request",
+                        "name": "sport",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sport.CreateSportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.Sport"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or bad request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Sport with this name already exists",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sports/{sport_id}": {
+            "get": {
+                "description": "Get details of a specific sport by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sports"
+                ],
+                "summary": "Get a sport by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sport ID",
+                        "name": "sport_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.Sport"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Sport not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin can update an existing sport's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sports"
+                ],
+                "summary": "Update a sport",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sport ID",
+                        "name": "sport_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Sport update request",
+                        "name": "sport",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sport.UpdateSportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.Sport"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or bad request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Sport not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Sport with this name already exists (if name changed)",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin can delete a sport (and its associated skills due to DB constraints)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sports"
+                ],
+                "summary": "Delete a sport",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sport ID",
+                        "name": "sport_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sport deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/responses.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid sport ID",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Sport not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sports/{sport_id}/skills": {
+            "get": {
+                "description": "Get all skills associated with a specific sport",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Skills"
+                ],
+                "summary": "Get skills for a sport",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sport ID",
+                        "name": "sport_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of items per page",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sport.Skill"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid sport ID",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Sport not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin can add a new skill to a specific sport",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Skills"
+                ],
+                "summary": "Add a skill to a sport",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sport ID",
+                        "name": "sport_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Skill creation request",
+                        "name": "skill",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sport.CreateSkillRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.Skill"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or bad request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Sport not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Skill with this name already exists for this sport",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/sports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Authenticated user can retrieve their list of sport preferences",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserSports"
+                ],
+                "summary": "Get logged-in user's sport preferences",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sport.UserSport"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Authenticated user can add or update their preference for a sport, including position and level",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserSports"
+                ],
+                "summary": "Add or update a sport preference for the logged-in user",
+                "parameters": [
+                    {
+                        "description": "User sport preference request",
+                        "name": "preference",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sport.UserSportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Preference updated",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.UserSport"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "201": {
+                        "description": "Preference added",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sport.UserSport"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or bad request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Sport not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/sports/{sport_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Authenticated user can remove one of their sport preferences",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserSports"
+                ],
+                "summary": "Remove a sport preference for the logged-in user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sport ID to remove preference for",
+                        "name": "sport_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Preference removed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/responses.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid sport ID",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Sport preference not found for this user",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues": {
+            "get": {
+                "description": "Get a paginated list of all venues with optional filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Get all venues",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page (default: 10, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by availability",
+                        "name": "available",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by location (partial match)",
+                        "name": "location",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by minimum number of courts",
+                        "name": "min_courts",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filter by maximum hourly rate",
+                        "name": "max_price",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of venues",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.PaginatedResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/venue.Venue"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{venue_id}": {
+            "get": {
+                "description": "Get detailed information about a venue by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Get venue by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Venue details",
+                        "schema": {
+                            "$ref": "#/definitions/venue.Venue"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid venue ID",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{venue_id}/courts": {
+            "get": {
+                "description": "Get all courts for a specific venue",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Get venue courts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of courts",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/venue.Ground"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid venue ID",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{venue_id}/timeslots": {
+            "get": {
+                "description": "Get time slots for a specific venue, optionally filtered by date and court number",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "venues"
+                ],
+                "summary": "Get venue time slots",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Venue ID",
+                        "name": "venue_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by date (YYYY-MM-DD format)",
+                        "name": "date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by court number",
+                        "name": "court_number",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of time slots",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/venue.TimeSlot"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input parameters",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Venue not found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -981,6 +3208,19 @@ const docTemplate = `{
                 }
             }
         },
+        "auth.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "invalidate_all_sessions": {
+                    "description": "If true, invalidate all user's sessions",
+                    "type": "boolean"
+                },
+                "refresh_token": {
+                    "description": "Optional: specific token to invalidate",
+                    "type": "string"
+                }
+            }
+        },
         "auth.OTPRequest": {
             "type": "object",
             "required": [
@@ -1009,41 +3249,66 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "email",
+                "name",
                 "password",
                 "phone",
                 "username"
             ],
             "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "coordinates": {
+                    "$ref": "#/definitions/models.Coordinates"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "district": {
+                    "type": "string"
+                },
                 "email": {
-                    "type": "string",
-                    "example": "john@example.com"
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 },
                 "password": {
                     "type": "string",
-                    "maxLength": 72,
-                    "minLength": 8,
-                    "example": "password123"
+                    "minLength": 8
                 },
                 "phone": {
-                    "description": "e164 for international phone number format",
-                    "type": "string",
-                    "example": "+919876543210"
+                    "type": "string"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "preferred_sports": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "role": {
-                    "description": "Specify allowed roles if fixed",
-                    "type": "string",
-                    "enum": [
-                        "player",
-                        "admin",
-                        "manager"
-                    ],
-                    "example": "player"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "social_media": {
+                    "$ref": "#/definitions/models.SocialMedia"
+                },
+                "state": {
+                    "type": "string"
                 },
                 "username": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 3,
-                    "example": "john_doe"
+                    "type": "string"
                 }
             }
         },
@@ -1098,6 +3363,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Mumbai"
                 },
+                "coordinates": {
+                    "$ref": "#/definitions/models.Coordinates"
+                },
                 "country": {
                     "type": "string",
                     "example": "India"
@@ -1115,12 +3383,13 @@ const docTemplate = `{
                     "example": "400001"
                 },
                 "preferred_sports": {
-                    "type": "string",
-                    "example": "[\"cricket\",\"football\"]"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "social_media": {
-                    "type": "string",
-                    "example": "{\"twitter\":\"@johndoe\"}"
+                    "$ref": "#/definitions/models.SocialMedia"
                 },
                 "state": {
                     "type": "string",
@@ -1147,8 +3416,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "coordinates": {
-                    "description": "Assuming JSON string",
-                    "type": "string"
+                    "$ref": "#/definitions/models.Coordinates"
                 },
                 "country": {
                     "type": "string"
@@ -1184,18 +3452,22 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "preferred_sports": {
-                    "description": "Assuming JSON string",
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "profile_image": {
                     "type": "string"
                 },
-                "role": {
-                    "type": "string"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "social_media": {
-                    "description": "Assuming JSON string",
-                    "type": "string"
+                    "$ref": "#/definitions/models.SocialMedia"
                 },
                 "state": {
                     "type": "string"
@@ -1228,6 +3500,794 @@ const docTemplate = `{
                     "example": "+919876543210"
                 }
             }
+        },
+        "models.Coordinates": {
+            "type": "object",
+            "properties": {
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.SocialMedia": {
+            "type": "object",
+            "properties": {
+                "facebook": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "linkedin": {
+                    "type": "string"
+                },
+                "twitter": {
+                    "type": "string"
+                }
+            }
+        },
+        "responses.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "errors": {},
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "responses.PaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "sport.CreateSkillRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "weight": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0
+                }
+            }
+        },
+        "sport.CreateSportRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "equipment": {
+                    "$ref": "#/definitions/sport.Equipment"
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "is_active": {
+                    "description": "Pointer to distinguish between not provided and false",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "positions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sport.Position"
+                    }
+                },
+                "rules": {
+                    "$ref": "#/definitions/sport.Rules"
+                }
+            }
+        },
+        "sport.Equipment": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "is_required": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "sport.Position": {
+            "type": "object",
+            "properties": {
+                "abbreviation": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "sport.Rules": {
+            "type": "object",
+            "properties": {
+                "game_duration": {
+                    "description": "e.g., \"90 minutes\", \"4 quarters of 12 minutes\"",
+                    "type": "string"
+                },
+                "max_players": {
+                    "type": "integer"
+                },
+                "min_players": {
+                    "type": "integer"
+                },
+                "other": {
+                    "type": "string"
+                }
+            }
+        },
+        "sport.Skill": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sport_id": {
+                    "description": "Foreign key to Sport",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weight": {
+                    "description": "Importance factor of the skill",
+                    "type": "number"
+                }
+            }
+        },
+        "sport.Sport": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "equipment": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sport.Equipment"
+                    }
+                },
+                "icon": {
+                    "description": "URL or path to icon",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "description": "To soft-enable/disable sport visibility",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "positions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sport.Position"
+                    }
+                },
+                "required_skills": {
+                    "description": "Skills associated with this sport",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sport.Skill"
+                    }
+                },
+                "rules": {
+                    "$ref": "#/definitions/sport.Rules"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "sport.UpdateSkillRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "weight": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0
+                }
+            }
+        },
+        "sport.UpdateSportRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "equipment": {
+                    "$ref": "#/definitions/sport.Equipment"
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "positions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sport.Position"
+                    }
+                },
+                "rules": {
+                    "description": "Pointer to allow partial update of complex fields",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/sport.Rules"
+                        }
+                    ]
+                }
+            }
+        },
+        "sport.UserSport": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "description": "e.g., \"Beginner\", \"Intermediate\", \"Advanced\", \"Professional\"",
+                    "type": "string"
+                },
+                "position": {
+                    "description": "e.g., \"Forward\", \"Goalkeeper\"",
+                    "type": "string"
+                },
+                "sport": {
+                    "description": "Eager load sport details",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/sport.Sport"
+                        }
+                    ]
+                },
+                "sport_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sport.UserSportRequest": {
+            "type": "object",
+            "required": [
+                "sport_id"
+            ],
+            "properties": {
+                "level": {
+                    "description": "e.g., \"Beginner\", \"Intermediate\"",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "position": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "sport_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "utils.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.PaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "pagination": {
+                    "$ref": "#/definitions/utils.PaginationData"
+                }
+            }
+        },
+        "utils.PaginationData": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean"
+                },
+                "has_prev": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "utils.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "venue.AutoTimeSlotInput": {
+            "type": "object",
+            "required": [
+                "court_numbers",
+                "days_of_week",
+                "duration",
+                "end_date",
+                "end_time",
+                "price",
+                "start_date",
+                "start_time"
+            ],
+            "properties": {
+                "booking_type": {
+                    "type": "string"
+                },
+                "court_numbers": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "days_of_week": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "duration": {
+                    "type": "integer",
+                    "minimum": 15
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "equipment": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "venue.Booking": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "ground": {
+                    "$ref": "#/definitions/venue.Ground"
+                },
+                "ground_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "purpose": {
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "venue.CourtInput": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "venue.CreateBookingRequest": {
+            "type": "object",
+            "required": [
+                "end_time",
+                "ground_id",
+                "start_time"
+            ],
+            "properties": {
+                "end_time": {
+                    "type": "string"
+                },
+                "ground_id": {
+                    "type": "integer"
+                },
+                "purpose": {
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "venue.Ground": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "venue_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "venue.TimeSlot": {
+            "type": "object",
+            "properties": {
+                "booked_by": {
+                    "type": "integer"
+                },
+                "booking_type": {
+                    "type": "string"
+                },
+                "court_number": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "equipment": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_booked": {
+                    "type": "boolean"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "venue_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "venue.TimeSlotInput": {
+            "type": "object",
+            "required": [
+                "court_number",
+                "end_time",
+                "price",
+                "start_time"
+            ],
+            "properties": {
+                "booking_type": {
+                    "type": "string"
+                },
+                "court_number": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "equipment": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "start_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "venue.UpdateBookingStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "confirmed",
+                        "rejected",
+                        "cancelled",
+                        "completed",
+                        "pending"
+                    ]
+                }
+            }
+        },
+        "venue.Venue": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean"
+                },
+                "capacity": {
+                    "type": "integer"
+                },
+                "contact_info": {
+                    "type": "string"
+                },
+                "coordinates": {
+                    "type": "string"
+                },
+                "court_count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "facilities": {
+                    "type": "string"
+                },
+                "hourly_rate": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "images": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "manager_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "social_hours": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "venue.VenueInput": {
+            "type": "object",
+            "required": [
+                "court_count",
+                "hourly_rate",
+                "location",
+                "name"
+            ],
+            "properties": {
+                "available": {
+                    "type": "boolean"
+                },
+                "capacity": {
+                    "type": "integer"
+                },
+                "contact_info": {
+                    "type": "string"
+                },
+                "coordinates": {
+                    "type": "string"
+                },
+                "court_count": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string"
+                },
+                "facilities": {
+                    "type": "string"
+                },
+                "hourly_rate": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "images": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "social_hours": {
+                    "type": "string"
+                }
+            }
         }
     }
 }`
@@ -1239,7 +4299,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api",
 	Schemes:          []string{},
 	Title:            "MiowNation REST API(-_-)",
-	Description:      "This is a sample server for demonstrating Swagger with Gin.",
+	Description:      "This is a  server for Sport_go🏏.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 

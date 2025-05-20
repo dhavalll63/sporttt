@@ -45,6 +45,15 @@ definitions:
     - login_identifier
     - password
     type: object
+  auth.LogoutRequest:
+    properties:
+      invalidate_all_sessions:
+        description: If true, invalidate all user's sessions
+        type: boolean
+      refresh_token:
+        description: 'Optional: specific token to invalidate'
+        type: string
+    type: object
   auth.OTPRequest:
     properties:
       phone:
@@ -63,33 +72,46 @@ definitions:
     type: object
   auth.RegisterRequest:
     properties:
+      address:
+        type: string
+      bio:
+        type: string
+      city:
+        type: string
+      coordinates:
+        $ref: '#/definitions/models.Coordinates'
+      country:
+        type: string
+      district:
+        type: string
       email:
-        example: john@example.com
+        type: string
+      name:
         type: string
       password:
-        example: password123
-        maxLength: 72
         minLength: 8
         type: string
       phone:
-        description: e164 for international phone number format
-        example: "+919876543210"
         type: string
+      postal_code:
+        type: string
+      preferred_sports:
+        items:
+          type: string
+        type: array
       role:
-        description: Specify allowed roles if fixed
-        enum:
-        - player
-        - admin
-        - manager
-        example: player
+        items:
+          type: string
+        type: array
+      social_media:
+        $ref: '#/definitions/models.SocialMedia'
+      state:
         type: string
       username:
-        example: john_doe
-        maxLength: 30
-        minLength: 3
         type: string
     required:
     - email
+    - name
     - password
     - phone
     - username
@@ -131,6 +153,8 @@ definitions:
       city:
         example: Mumbai
         type: string
+      coordinates:
+        $ref: '#/definitions/models.Coordinates'
       country:
         example: India
         type: string
@@ -144,11 +168,11 @@ definitions:
         example: "400001"
         type: string
       preferred_sports:
-        example: '["cricket","football"]'
-        type: string
+        items:
+          type: string
+        type: array
       social_media:
-        example: '{"twitter":"@johndoe"}'
-        type: string
+        $ref: '#/definitions/models.SocialMedia'
       state:
         example: Maharashtra
         type: string
@@ -167,8 +191,7 @@ definitions:
       city:
         type: string
       coordinates:
-        description: Assuming JSON string
-        type: string
+        $ref: '#/definitions/models.Coordinates'
       country:
         type: string
       created_at:
@@ -192,15 +215,17 @@ definitions:
       postal_code:
         type: string
       preferred_sports:
-        description: Assuming JSON string
-        type: string
+        items:
+          type: string
+        type: array
       profile_image:
         type: string
-      role:
-        type: string
+      roles:
+        items:
+          type: string
+        type: array
       social_media:
-        description: Assuming JSON string
-        type: string
+        $ref: '#/definitions/models.SocialMedia'
       state:
         type: string
       updated_at:
@@ -223,13 +248,823 @@ definitions:
     - code
     - phone
     type: object
-host: localhost:8088  
+  models.Coordinates:
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+    type: object
+  models.SocialMedia:
+    properties:
+      facebook:
+        type: string
+      instagram:
+        type: string
+      linkedin:
+        type: string
+      twitter:
+        type: string
+    type: object
+  responses.ErrorResponse:
+    properties:
+      errors: {}
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  responses.PaginatedResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      page:
+        type: integer
+      page_size:
+        type: integer
+      status:
+        type: string
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  responses.SuccessResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  sport.CreateSkillRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      weight:
+        maximum: 10
+        minimum: 0
+        type: number
+    required:
+    - name
+    type: object
+  sport.CreateSportRequest:
+    properties:
+      description:
+        maxLength: 5000
+        type: string
+      equipment:
+        $ref: '#/definitions/sport.Equipment'
+      icon:
+        maxLength: 255
+        type: string
+      is_active:
+        description: Pointer to distinguish between not provided and false
+        type: boolean
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      positions:
+        items:
+          $ref: '#/definitions/sport.Position'
+        type: array
+      rules:
+        $ref: '#/definitions/sport.Rules'
+    required:
+    - name
+    type: object
+  sport.Equipment:
+    properties:
+      description:
+        type: string
+      is_required:
+        type: boolean
+      name:
+        type: string
+    type: object
+  sport.Position:
+    properties:
+      abbreviation:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  sport.Rules:
+    properties:
+      game_duration:
+        description: e.g., "90 minutes", "4 quarters of 12 minutes"
+        type: string
+      max_players:
+        type: integer
+      min_players:
+        type: integer
+      other:
+        type: string
+    type: object
+  sport.Skill:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      sport_id:
+        description: Foreign key to Sport
+        type: integer
+      updated_at:
+        type: string
+      weight:
+        description: Importance factor of the skill
+        type: number
+    type: object
+  sport.Sport:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      equipment:
+        items:
+          $ref: '#/definitions/sport.Equipment'
+        type: array
+      icon:
+        description: URL or path to icon
+        type: string
+      id:
+        type: integer
+      is_active:
+        description: To soft-enable/disable sport visibility
+        type: boolean
+      name:
+        type: string
+      positions:
+        items:
+          $ref: '#/definitions/sport.Position'
+        type: array
+      required_skills:
+        description: Skills associated with this sport
+        items:
+          $ref: '#/definitions/sport.Skill'
+        type: array
+      rules:
+        $ref: '#/definitions/sport.Rules'
+      updated_at:
+        type: string
+    type: object
+  sport.UpdateSkillRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      weight:
+        maximum: 10
+        minimum: 0
+        type: number
+    type: object
+  sport.UpdateSportRequest:
+    properties:
+      description:
+        maxLength: 5000
+        type: string
+      equipment:
+        $ref: '#/definitions/sport.Equipment'
+      icon:
+        maxLength: 255
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      positions:
+        items:
+          $ref: '#/definitions/sport.Position'
+        type: array
+      rules:
+        allOf:
+        - $ref: '#/definitions/sport.Rules'
+        description: Pointer to allow partial update of complex fields
+    type: object
+  sport.UserSport:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      level:
+        description: e.g., "Beginner", "Intermediate", "Advanced", "Professional"
+        type: string
+      position:
+        description: e.g., "Forward", "Goalkeeper"
+        type: string
+      sport:
+        allOf:
+        - $ref: '#/definitions/sport.Sport'
+        description: Eager load sport details
+      sport_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  sport.UserSportRequest:
+    properties:
+      level:
+        description: e.g., "Beginner", "Intermediate"
+        maxLength: 50
+        type: string
+      position:
+        maxLength: 100
+        type: string
+      sport_id:
+        type: integer
+    required:
+    - sport_id
+    type: object
+  utils.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  utils.PaginatedResponse:
+    properties:
+      data: {}
+      pagination:
+        $ref: '#/definitions/utils.PaginationData'
+    type: object
+  utils.PaginationData:
+    properties:
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  utils.SuccessResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+    type: object
+  venue.AutoTimeSlotInput:
+    properties:
+      booking_type:
+        type: string
+      court_numbers:
+        items:
+          type: integer
+        type: array
+      days_of_week:
+        items:
+          type: string
+        type: array
+      duration:
+        minimum: 15
+        type: integer
+      end_date:
+        type: string
+      end_time:
+        type: string
+      equipment:
+        type: string
+      price:
+        minimum: 0
+        type: number
+      start_date:
+        type: string
+      start_time:
+        type: string
+    required:
+    - court_numbers
+    - days_of_week
+    - duration
+    - end_date
+    - end_time
+    - price
+    - start_date
+    - start_time
+    type: object
+  venue.Booking:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      end_time:
+        type: string
+      ground:
+        $ref: '#/definitions/venue.Ground'
+      ground_id:
+        type: integer
+      id:
+        type: integer
+      purpose:
+        type: string
+      start_time:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  venue.CourtInput:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      type:
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  venue.CreateBookingRequest:
+    properties:
+      end_time:
+        type: string
+      ground_id:
+        type: integer
+      purpose:
+        type: string
+      start_time:
+        type: string
+    required:
+    - end_time
+    - ground_id
+    - start_time
+    type: object
+  venue.Ground:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      venue_id:
+        type: integer
+    type: object
+  venue.TimeSlot:
+    properties:
+      booked_by:
+        type: integer
+      booking_type:
+        type: string
+      court_number:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      end_time:
+        type: string
+      equipment:
+        type: string
+      id:
+        type: integer
+      is_booked:
+        type: boolean
+      price:
+        type: number
+      start_time:
+        type: string
+      updated_at:
+        type: string
+      venue_id:
+        type: integer
+    type: object
+  venue.TimeSlotInput:
+    properties:
+      booking_type:
+        type: string
+      court_number:
+        minimum: 1
+        type: integer
+      end_time:
+        type: string
+      equipment:
+        type: string
+      price:
+        minimum: 0
+        type: number
+      start_time:
+        type: string
+    required:
+    - court_number
+    - end_time
+    - price
+    - start_time
+    type: object
+  venue.UpdateBookingStatusRequest:
+    properties:
+      status:
+        enum:
+        - confirmed
+        - rejected
+        - cancelled
+        - completed
+        - pending
+        type: string
+    required:
+    - status
+    type: object
+  venue.Venue:
+    properties:
+      available:
+        type: boolean
+      capacity:
+        type: integer
+      contact_info:
+        type: string
+      coordinates:
+        type: string
+      court_count:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      facilities:
+        type: string
+      hourly_rate:
+        type: number
+      id:
+        type: integer
+      images:
+        type: string
+      location:
+        type: string
+      manager_id:
+        type: integer
+      name:
+        type: string
+      social_hours:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  venue.VenueInput:
+    properties:
+      available:
+        type: boolean
+      capacity:
+        type: integer
+      contact_info:
+        type: string
+      coordinates:
+        type: string
+      court_count:
+        minimum: 1
+        type: integer
+      description:
+        type: string
+      facilities:
+        type: string
+      hourly_rate:
+        minimum: 0
+        type: number
+      images:
+        type: string
+      location:
+        type: string
+      name:
+        type: string
+      social_hours:
+        type: string
+    required:
+    - court_count
+    - hourly_rate
+    - location
+    - name
+    type: object
+host: localhost:8088
 info:
   contact: {}
-  description: This is a sample server for demonstrating Swagger with Gin.
+  description: "This is a  server for Sport_go\U0001F3CF."
   title: MiowNation REST API(-_-)
   version: "1.0"
 paths:
+  /api/bookings:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all bookings made by the current user
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        maximum: 100
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user's bookings
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get user's bookings
+      tags:
+      - bookings
+    post:
+      consumes:
+      - application/json
+      description: Creates a new booking for a specific ground/court
+      parameters:
+      - description: Booking details
+        in: body
+        name: booking
+        required: true
+        schema:
+          $ref: '#/definitions/venue.CreateBookingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Booking created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ground not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Time slot not available
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new booking
+      tags:
+      - bookings
+  /api/bookings/{booking_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Cancels a specific booking and releases the time slot
+      parameters:
+      - description: Booking ID
+        in: path
+        name: booking_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Booking cancelled successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Booking not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Cannot cancel booking
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Cancel a booking
+      tags:
+      - bookings
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a specific booking
+      parameters:
+      - description: Booking ID
+        in: path
+        name: booking_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Booking details
+          schema:
+            $ref: '#/definitions/venue.Booking'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Booking not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get booking details
+      tags:
+      - bookings
+  /api/venue-manager/{venue_id}/bookings:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all bookings for a venue with pagination and optional
+        filters
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        maximum: 100
+        name: limit
+        type: integer
+      - description: Filter by status (pending, confirmed, cancelled, completed, rejected)
+        in: query
+        name: status
+        type: string
+      - description: Filter by date (YYYY-MM-DD format)
+        in: query
+        name: date
+        type: string
+      - description: Filter by court ID
+        in: query
+        name: court_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of bookings and pagination metadata
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Venue not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get bookings for a specific venue
+      tags:
+      - venues
+  /api/venue-manager/bookings/{booking_id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Updates the status of a specific booking (confirmed, rejected,
+        cancelled, completed)
+      parameters:
+      - description: Booking ID
+        in: path
+        name: booking_id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/venue.UpdateBookingStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Booking not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update booking status
+      tags:
+      - venues
   /auth/change-password:
     post:
       consumes:
@@ -364,7 +1199,16 @@ paths:
       - Auth
   /auth/logout:
     post:
-      description: Invalidates the user's refresh token.
+      consumes:
+      - application/json
+      description: Invalidates the user's current session and refresh tokens (optionally
+        all sessions)
+      parameters:
+      - description: Logout options
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/auth.LogoutRequest'
       produces:
       - application/json
       responses:
@@ -375,7 +1219,13 @@ paths:
               type: string
             type: object
         "400":
-          description: Refresh token missing or invalid
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
           schema:
             additionalProperties:
               type: string
@@ -817,4 +1667,1148 @@ paths:
       summary: Verify OTP
       tags:
       - Auth
+  /manager/venues:
+    post:
+      consumes:
+      - application/json
+      description: Create a new venue with the provided details
+      parameters:
+      - description: Venue information
+        in: body
+        name: venue
+        required: true
+        schema:
+          $ref: '#/definitions/venue.VenueInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Venue created successfully
+          schema:
+            $ref: '#/definitions/venue.Venue'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new venue
+      tags:
+      - venues
+  /manager/venues/{venue_id}:
+    delete:
+      description: Delete an existing venue and all its associated data
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Venue deleted successfully
+          schema:
+            $ref: '#/definitions/utils.SuccessResponse'
+        "400":
+          description: Invalid venue ID
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete venue
+      tags:
+      - venues
+    put:
+      consumes:
+      - application/json
+      description: Update an existing venue's details
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Updated venue information
+        in: body
+        name: venue
+        required: true
+        schema:
+          $ref: '#/definitions/venue.VenueInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Venue updated successfully
+          schema:
+            $ref: '#/definitions/venue.Venue'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update venue
+      tags:
+      - venues
+  /manager/venues/{venue_id}/courts:
+    post:
+      consumes:
+      - application/json
+      description: Add a new court to an existing venue
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Court information
+        in: body
+        name: court
+        required: true
+        schema:
+          $ref: '#/definitions/venue.CourtInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Court added successfully
+          schema:
+            $ref: '#/definitions/venue.Ground'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Add court to venue
+      tags:
+      - venues
+  /manager/venues/{venue_id}/courts/{court_id}:
+    delete:
+      description: Delete an existing court from a venue
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Court ID
+        in: path
+        name: court_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Court deleted successfully
+          schema:
+            $ref: '#/definitions/utils.SuccessResponse'
+        "400":
+          description: Invalid input or court doesn't belong to venue
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Court or venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete court
+      tags:
+      - venues
+    put:
+      consumes:
+      - application/json
+      description: Update an existing court's details
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Court ID
+        in: path
+        name: court_id
+        required: true
+        type: integer
+      - description: Updated court information
+        in: body
+        name: court
+        required: true
+        schema:
+          $ref: '#/definitions/venue.CourtInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Court updated successfully
+          schema:
+            $ref: '#/definitions/venue.Ground'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Court or venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update court
+      tags:
+      - venues
+  /manager/venues/{venue_id}/timeslots:
+    post:
+      consumes:
+      - application/json
+      description: Create one or more time slots for a venue
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Time slot information
+        in: body
+        name: timeSlots
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/venue.TimeSlotInput'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Time slots created successfully
+          schema:
+            items:
+              $ref: '#/definitions/venue.TimeSlot'
+            type: array
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "409":
+          description: Time slot conflict
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create time slots
+      tags:
+      - venues
+  /manager/venues/{venue_id}/timeslots/{timeslot_id}:
+    delete:
+      description: Delete an existing time slot
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Time Slot ID
+        in: path
+        name: timeslot_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Time slot deleted successfully
+          schema:
+            $ref: '#/definitions/utils.SuccessResponse'
+        "400":
+          description: Invalid input or time slot doesn't belong to venue
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Time slot or venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "409":
+          description: Cannot delete a booked time slot
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete time slot
+      tags:
+      - venues
+    put:
+      consumes:
+      - application/json
+      description: Update an existing time slot's details
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Time Slot ID
+        in: path
+        name: timeslot_id
+        required: true
+        type: integer
+      - description: Updated time slot information
+        in: body
+        name: timeSlot
+        required: true
+        schema:
+          $ref: '#/definitions/venue.TimeSlotInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Time slot updated successfully
+          schema:
+            $ref: '#/definitions/venue.TimeSlot'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Time slot or venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "409":
+          description: Time slot conflict
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update time slot
+      tags:
+      - venues
+  /manager/venues/{venue_id}/timeslots/auto:
+    post:
+      consumes:
+      - application/json
+      description: Generate time slots automatically for a venue based on specified
+        parameters
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Auto time slot generation parameters
+        in: body
+        name: autoSlots
+        required: true
+        schema:
+          $ref: '#/definitions/venue.AutoTimeSlotInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Time slots created successfully
+          schema:
+            items:
+              $ref: '#/definitions/venue.TimeSlot'
+            type: array
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "403":
+          description: Forbidden - not the venue manager
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "409":
+          description: Time slot conflict
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Generate time slots automatically
+      tags:
+      - venues
+  /skills/{skill_id}:
+    delete:
+      description: Admin can delete a skill
+      parameters:
+      - description: Skill ID
+        in: path
+        name: skill_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Skill deleted successfully
+          schema:
+            $ref: '#/definitions/responses.SuccessResponse'
+        "400":
+          description: Invalid skill ID
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Skill not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a skill
+      tags:
+      - Skills
+    put:
+      consumes:
+      - application/json
+      description: Admin can update an existing skill's details
+      parameters:
+      - description: Skill ID
+        in: path
+        name: skill_id
+        required: true
+        type: integer
+      - description: Skill update request
+        in: body
+        name: skill
+        required: true
+        schema:
+          $ref: '#/definitions/sport.UpdateSkillRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.Skill'
+              type: object
+        "400":
+          description: Validation error or bad request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Skill not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "409":
+          description: Skill with this name already exists for its sport
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a skill
+      tags:
+      - Skills
+  /sports:
+    get:
+      description: Get a list of all available sports with optional filters
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: pageSize
+        type: integer
+      - description: Search term for name or description
+        in: query
+        name: search
+        type: string
+      - description: Filter by active status (admin only)
+        in: query
+        name: is_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sport.Sport'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get all sports
+      tags:
+      - Sports
+    post:
+      consumes:
+      - application/json
+      description: Admin can create a new sport
+      parameters:
+      - description: Sport creation request
+        in: body
+        name: sport
+        required: true
+        schema:
+          $ref: '#/definitions/sport.CreateSportRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.Sport'
+              type: object
+        "400":
+          description: Validation error or bad request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "409":
+          description: Sport with this name already exists
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new sport
+      tags:
+      - Sports
+  /sports/{sport_id}:
+    delete:
+      description: Admin can delete a sport (and its associated skills due to DB constraints)
+      parameters:
+      - description: Sport ID
+        in: path
+        name: sport_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sport deleted successfully
+          schema:
+            $ref: '#/definitions/responses.SuccessResponse'
+        "400":
+          description: Invalid sport ID
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Sport not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a sport
+      tags:
+      - Sports
+    get:
+      description: Get details of a specific sport by its ID
+      parameters:
+      - description: Sport ID
+        in: path
+        name: sport_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.Sport'
+              type: object
+        "404":
+          description: Sport not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get a sport by ID
+      tags:
+      - Sports
+    put:
+      consumes:
+      - application/json
+      description: Admin can update an existing sport's details
+      parameters:
+      - description: Sport ID
+        in: path
+        name: sport_id
+        required: true
+        type: integer
+      - description: Sport update request
+        in: body
+        name: sport
+        required: true
+        schema:
+          $ref: '#/definitions/sport.UpdateSportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.Sport'
+              type: object
+        "400":
+          description: Validation error or bad request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Sport not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "409":
+          description: Sport with this name already exists (if name changed)
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a sport
+      tags:
+      - Sports
+  /sports/{sport_id}/skills:
+    get:
+      description: Get all skills associated with a specific sport
+      parameters:
+      - description: Sport ID
+        in: path
+        name: sport_id
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sport.Skill'
+                  type: array
+              type: object
+        "400":
+          description: Invalid sport ID
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Sport not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get skills for a sport
+      tags:
+      - Skills
+    post:
+      consumes:
+      - application/json
+      description: Admin can add a new skill to a specific sport
+      parameters:
+      - description: Sport ID
+        in: path
+        name: sport_id
+        required: true
+        type: integer
+      - description: Skill creation request
+        in: body
+        name: skill
+        required: true
+        schema:
+          $ref: '#/definitions/sport.CreateSkillRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.Skill'
+              type: object
+        "400":
+          description: Validation error or bad request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Sport not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "409":
+          description: Skill with this name already exists for this sport
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add a skill to a sport
+      tags:
+      - Skills
+  /users/me/sports:
+    get:
+      description: Authenticated user can retrieve their list of sport preferences
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sport.UserSport'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get logged-in user's sport preferences
+      tags:
+      - UserSports
+    post:
+      consumes:
+      - application/json
+      description: Authenticated user can add or update their preference for a sport,
+        including position and level
+      parameters:
+      - description: User sport preference request
+        in: body
+        name: preference
+        required: true
+        schema:
+          $ref: '#/definitions/sport.UserSportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Preference updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.UserSport'
+              type: object
+        "201":
+          description: Preference added
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sport.UserSport'
+              type: object
+        "400":
+          description: Validation error or bad request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Sport not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add or update a sport preference for the logged-in user
+      tags:
+      - UserSports
+  /users/me/sports/{sport_id}:
+    delete:
+      description: Authenticated user can remove one of their sport preferences
+      parameters:
+      - description: Sport ID to remove preference for
+        in: path
+        name: sport_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Preference removed successfully
+          schema:
+            $ref: '#/definitions/responses.SuccessResponse'
+        "400":
+          description: Invalid sport ID
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Sport preference not found for this user
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove a sport preference for the logged-in user
+      tags:
+      - UserSports
+  /venues:
+    get:
+      description: Get a paginated list of all venues with optional filters
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Number of items per page (default: 10, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by availability
+        in: query
+        name: available
+        type: boolean
+      - description: Filter by location (partial match)
+        in: query
+        name: location
+        type: string
+      - description: Filter by minimum number of courts
+        in: query
+        name: min_courts
+        type: integer
+      - description: Filter by maximum hourly rate
+        in: query
+        name: max_price
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of venues
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/venue.Venue'
+                  type: array
+              type: object
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      summary: Get all venues
+      tags:
+      - venues
+  /venues/{venue_id}:
+    get:
+      description: Get detailed information about a venue by its ID
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Venue details
+          schema:
+            $ref: '#/definitions/venue.Venue'
+        "400":
+          description: Invalid venue ID
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      summary: Get venue by ID
+      tags:
+      - venues
+  /venues/{venue_id}/courts:
+    get:
+      description: Get all courts for a specific venue
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of courts
+          schema:
+            items:
+              $ref: '#/definitions/venue.Ground'
+            type: array
+        "400":
+          description: Invalid venue ID
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      summary: Get venue courts
+      tags:
+      - venues
+  /venues/{venue_id}/timeslots:
+    get:
+      description: Get time slots for a specific venue, optionally filtered by date
+        and court number
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venue_id
+        required: true
+        type: integer
+      - description: Filter by date (YYYY-MM-DD format)
+        in: query
+        name: date
+        type: string
+      - description: Filter by court number
+        in: query
+        name: court_number
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of time slots
+          schema:
+            items:
+              $ref: '#/definitions/venue.TimeSlot'
+            type: array
+        "400":
+          description: Invalid input parameters
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Venue not found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      summary: Get venue time slots
+      tags:
+      - venues
 swagger: "2.0"

@@ -32,7 +32,7 @@ type User struct {
 	VerifyToken     string             `json:"-"`
 	VerifyExpires   *time.Time         `json:"-"`
 	Coordinates     models.Coordinates `json:"coordinates,omitempty" gorm:"type:jsonb;default:'{}'"`
-	PreferredSports []string           `json:"preferred_sports,omitempty" gorm:"type:jsonb;default:'[]'"`
+	PreferredSports models.StringSlice `json:"preferred_sports,omitempty" gorm:"type:jsonb;default:'{}'"`
 	SocialMedia     models.SocialMedia `json:"social_media,omitempty" gorm:"type:jsonb;default:'{}'"`
 	RefreshTokens   []RefreshToken     `json:"-" gorm:"foreignKey:UserID"`
 }

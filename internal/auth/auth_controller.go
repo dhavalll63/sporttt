@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -113,6 +114,19 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
+	for _, rn := range req.Roles {
+		_, err := ac.repo.GetRoleByName(rn)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("role %q does not exist", rn)})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "role lookup failed"})
+			return
+		}
+
+	}
+
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
@@ -167,18 +181,27 @@ func (ac *AuthController) Register(c *gin.Context) {
 
 	// Create user
 	if err := ac.repo.CreateUser(newUser); err != nil {
+		// Print the real error
+		log.Printf("❌ CreateUser failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User creation failed: " + err.Error()})
 		return
 	}
+	DefaultUserRoleID := 1
 
-	// Assign default role
-	if err := ac.repo.AssignRoleToUser(newUser.ID, DefaultUserRole); err != nil {
-		// Log error but don't fail registration
-		fmt.Printf("Failed to assign default role to user: %v\n", err)
+	if len(req.Roles) == 0 {
+
+		if err := ac.repo.AssignRoleToUser(newUser.ID, "player"); err != nil {
+			log.Printf("Assign role %d failed: %v", DefaultUserRoleID, err)
+		}
+	}
+	for _, role := range req.Roles {
+		if err := ac.repo.AssignRoleToUser(newUser.ID, role); err != nil {
+			log.Printf("Assign role %d failed: %v", DefaultUserRoleID, err)
+		}
 	}
 
 	// Send verification email
-	verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", ac.config.App.FrontendURL, emailVerifyToken)
+	verificationLink := fmt.Sprintf("%s/api/auth/verify-email?token=%s", ac.config.App.FrontendURL, emailVerifyToken)
 	emailBody := fmt.Sprintf("Hello %s, please verify your email by clicking on this link: %s", newUser.Name, verificationLink)
 	if err := ac.sendEmail(newUser.Email, "Verify Your Email Address", emailBody); err != nil {
 		fmt.Printf("Failed to send verification email to %s: %v\n", newUser.Email, err)
@@ -534,15 +557,6 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully."})
 }
 
-// @Summary      Logout User
-// @Description  Invalidates the user's refresh token.
-// @Tags         Auth
-// @Security     BearerAuth
-// @Produce      json
-// @Success      200 {object} map[string]string "Logged out successfully"
-// @Failure      400 {object} map[string]string "Refresh token missing or invalid"
-// @Failure      500 {object} map[string]string "Failed to logout"
-// @Router       /auth/logout [post]
 // @Summary      Logout User
 // @Description  Invalidates the user's current session and refresh tokens (optionally all sessions)
 // @Tags         Auth

@@ -29,6 +29,7 @@ type AuthRepository interface {
 	InvalidateRefreshToken(tokenString string) error
 	InvalidateAllRefreshTokensForUser(UserID uint) error
 	DeleteRefreshToken(tokenString string) error
+	GetRoleByName(roleName string) (*user.Role, error)
 
 	AssignRoleToUser(userID uint, role string) error
 	GetUserRoles(userID uint) ([]string, error)
@@ -193,6 +194,7 @@ func (r *authRepository) AssignRoleToUser(userID uint, roleName string) error {
 		}
 		return fmt.Errorf("failed to find role: %w", err)
 	}
+	fmt.Print(role.ID)
 
 	if err := tx.Where("user_id = ? AND role_id = ?", userID, role.ID).First(&existingUserRole).Error; err == nil {
 		tx.Rollback()

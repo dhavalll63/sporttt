@@ -5,25 +5,20 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"sync" // For singleton pattern if desired
+	"sync"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger" // Optional: for GORM logger configuration
+	"gorm.io/gorm/logger"
 )
 
-// Config holds all configurations for the application.
-// Các trường (fields) phải được export (viết hoa chữ cái đầu) nếu bạn muốn
-// các package khác truy cập trực tiếp vào chúng sau khi load.
-// Fields must be exported (capitalized) if you want other packages
-// to directly access them after loading.
 type Config struct {
 	App struct {
-		Env         string `env:"APP_ENV" envDefault:"development"` // development, staging, production
+		Env         string `env:"APP_ENV" envDefault:"development"`
 		Port        string `env:"PORT"    envDefault:"8088"`
 		FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
-		UploadDir   string `env:"UPLOAD_DIR"   envDefault:"./public/uploads"` // Path for file uploads
+		UploadDir   string `env:"UPLOAD_DIR"   envDefault:"./public/uploads"`
 	}
 	DB struct {
 		Host     string `env:"DB_HOST"     envDefault:"localhost"`

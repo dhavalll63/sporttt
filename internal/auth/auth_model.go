@@ -93,6 +93,7 @@ type RegisterRequest struct {
 	Phone           string              `json:"phone" binding:"required"`
 	Address         string              `json:"address,omitempty"`
 	City            string              `json:"city,omitempty"`
+	Roles           []string            `json:"role,omitempty"`
 	District        string              `json:"district,omitempty"`
 	State           string              `json:"state,omitempty"`
 	Country         string              `json:"country,omitempty"`

@@ -1,16 +1,20 @@
-// venue/model.go
 package venue
 
 import (
 	"time"
 
 	"github.com/DhavalSuthar-24/miow/internal/user"
-	"gorm.io/gorm"
 )
 
-// Venue represents a sports facility
+type BaseModel struct {
+	ID        uint      `json:"id" gorm:"primarykey"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	DeletedAt time.Time `json:"deleted_at,omitempty" gorm:"index"`
+}
+
 type Venue struct {
-	gorm.Model
+	BaseModel
 	Name        string    `json:"name" gorm:"unique;not null"`
 	Location    string    `json:"location" gorm:"not null"`
 	Coordinates string    `json:"coordinates" gorm:"type:json"`
@@ -27,18 +31,17 @@ type Venue struct {
 	Manager     user.User `json:"-" gorm:"foreignKey:ManagerID"`
 }
 
-// Ground represents a specific playing area within a venue
 type Ground struct {
-	gorm.Model
+	BaseModel
 	VenueID     uint   `json:"venue_id" gorm:"index"`
+	Venue       Venue  `json:"venue" gorm:"foreignKey:VenueID"`
 	Name        string `json:"name" gorm:"not null"`
 	Type        string `json:"type" gorm:"not null"`
 	Description string `json:"description"`
 }
 
-// VenueSchedule defines the regular availability of a venue
 type VenueSchedule struct {
-	gorm.Model
+	BaseModel
 	VenueID     uint      `json:"venue_id" gorm:"index"`
 	StartTime   time.Time `json:"start_time"`
 	EndTime     time.Time `json:"end_time"`
@@ -52,8 +55,9 @@ type VenueSchedule struct {
 
 // Booking represents a reservation for a venue
 type Booking struct {
-	gorm.Model
+	BaseModel
 	GroundID  uint      `json:"ground_id" gorm:"index"`
+	Ground    Ground    `json:"ground" gorm:"foreignKey:GroundID"`
 	UserID    uint      `json:"user_id" gorm:"index"`
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
@@ -63,7 +67,7 @@ type Booking struct {
 
 // TimeSlot represents available booking slots for venues
 type TimeSlot struct {
-	gorm.Model
+	BaseModel
 	VenueID     uint      `json:"venue_id" gorm:"index"`
 	CourtNumber int       `json:"court_number" gorm:"default:1"`
 	StartTime   time.Time `json:"start_time"`
@@ -73,4 +77,70 @@ type TimeSlot struct {
 	Price       float64   `json:"price"`
 	BookingType string    `json:"booking_type" gorm:"default:'match'"`
 	Equipment   string    `json:"equipment" gorm:"type:json"`
+}
+
+// VenueInput represents the input for venue creation and update
+type VenueInput struct {
+	Name        string  `json:"name" binding:"required"`
+	Location    string  `json:"location" binding:"required"`
+	Coordinates string  `json:"coordinates"`
+	Facilities  string  `json:"facilities"`
+	Available   bool    `json:"available"`
+	ContactInfo string  `json:"contact_info"`
+	Description string  `json:"description"`
+	Images      string  `json:"images"`
+	Capacity    int     `json:"capacity"`
+	HourlyRate  float64 `json:"hourly_rate" binding:"required,min=0"`
+	CourtCount  int     `json:"court_count" binding:"required,min=1"`
+	SocialHours string  `json:"social_hours"`
+}
+
+// CourtInput represents the input for court creation and update
+type CourtInput struct {
+	Name        string `json:"name" binding:"required"`
+	Type        string `json:"type" binding:"required"`
+	Description string `json:"description"`
+}
+
+// TimeSlotInput represents the input for time slot creation
+type TimeSlotInput struct {
+	CourtNumber int       `json:"court_number" binding:"required,min=1"`
+	StartTime   time.Time `json:"start_time" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`
+	EndTime     time.Time `json:"end_time" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`
+	Price       float64   `json:"price" binding:"required,min=0"`
+	BookingType string    `json:"booking_type"`
+	Equipment   string    `json:"equipment"`
+}
+
+// AutoTimeSlotInput represents the input for generating time slots automatically
+type AutoTimeSlotInput struct {
+	CourtNumbers []int    `json:"court_numbers" binding:"required"`
+	StartDate    string   `json:"start_date" binding:"required"`
+	EndDate      string   `json:"end_date" binding:"required"`
+	StartTime    string   `json:"start_time" binding:"required"`
+	EndTime      string   `json:"end_time" binding:"required"`
+	Duration     int      `json:"duration" binding:"required,min=15"`
+	Price        float64  `json:"price" binding:"required,min=0"`
+	DaysOfWeek   []string `json:"days_of_week" binding:"required"`
+	BookingType  string   `json:"booking_type"`
+	Equipment    string   `json:"equipment"`
+}
+
+// BookingInput represents the input for booking creation
+type BookingInput struct {
+	GroundID  uint      `json:"ground_id" binding:"required"`
+	StartTime time.Time `json:"start_time" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`
+	EndTime   time.Time `json:"end_time" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`
+	Purpose   string    `json:"purpose"`
+}
+
+// BookingStatusInput represents the input for updating booking status
+type BookingStatusInput struct {
+	Status string `json:"status" binding:"required,oneof=confirmed pending cancelled rejected completed"`
+}
+
+// PaginationInput represents the input for pagination
+type PaginationInput struct {
+	Page  int `form:"page,default=1" binding:"min=1"`
+	Limit int `form:"limit,default=10" binding:"min=1,max=100"`
 }

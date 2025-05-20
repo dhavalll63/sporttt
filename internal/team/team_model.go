@@ -4,35 +4,38 @@ package team
 import (
 	"time"
 
+	"github.com/DhavalSuthar-24/miow/internal/sport"
 	"gorm.io/gorm"
 )
 
 // Team represents a sports team
 type Team struct {
 	gorm.Model
-	Name           string    `json:"name" gorm:"not null"`
-	Description    string    `json:"description"`
-	Logo           string    `json:"logo"`
-	CreatedByID    uint      `json:"created_by_id" gorm:"index"`
-	Sport          string    `json:"sport" gorm:"index"`
-	MinPlayers     int       `json:"min_players"`
-	MaxPlayers     int       `json:"max_players"`
-	Requirements   string    `json:"requirements" gorm:"type:json"`
-	Level          string    `json:"level"`
-	Achievements   string    `json:"achievements" gorm:"type:json"`
-	TrophyCount    int       `json:"trophy_count" gorm:"default:0"`
-	SocialLinks    string    `json:"social_links" gorm:"type:json"`
-	MatchHistory   string    `json:"match_history" gorm:"type:json"`
-	RegionalRank   int       `json:"regional_rank"`
-	LastRankUpdate time.Time `json:"last_rank_update"`
-	Rating         float64   `json:"rating" gorm:"default:1000.0"`
-	IsDeleted      bool      `json:"is_deleted" gorm:"default:false"`
+	Name           string      `json:"name" gorm:"not null"`
+	Description    string      `json:"description"`
+	Logo           string      `json:"logo"`
+	CreatedByID    uint        `json:"created_by_id" gorm:"index"`
+	Sport          sport.Sport `json:"sport" gorm:"foreignKey:SportID"`
+	SportID        uint        `json:"sport_id" gorm:"index"`
+	MinPlayers     int         `json:"min_players"`
+	MaxPlayers     int         `json:"max_players"`
+	Requirements   string      `json:"requirements" gorm:"type:json"`
+	Level          string      `json:"level"`
+	Achievements   string      `json:"achievements" gorm:"type:json"`
+	TrophyCount    int         `json:"trophy_count" gorm:"default:0"`
+	SocialLinks    string      `json:"social_links" gorm:"type:json"`
+	MatchHistory   string      `json:"match_history" gorm:"type:json"`
+	RegionalRank   int         `json:"regional_rank"`
+	LastRankUpdate time.Time   `json:"last_rank_update"`
+	Rating         float64     `json:"rating" gorm:"default:1000.0"`
+	IsDeleted      bool        `json:"is_deleted" gorm:"default:false"`
 }
 
 // TeamMember represents a user's membership in a team
 type TeamMember struct {
 	gorm.Model
 	TeamID       uint      `json:"team_id" gorm:"index"`
+	Team         Team      `json:"team" gorm:"foreignKey:TeamID"`
 	UserID       uint      `json:"user_id" gorm:"index"`
 	Role         string    `json:"role" gorm:"default:'player'"`
 	Position     string    `json:"position"`

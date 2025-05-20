@@ -7,9 +7,9 @@ import (
 
 	"github.com/DhavalSuthar-24/miow/config"
 
-	"github.com/DhavalSuthar-24/miow/internal/middleware" // Your middleware package
-	"github.com/DhavalSuthar-24/miow/pkg/responses"       // A common responses package (you might need to create this)
-	"github.com/DhavalSuthar-24/miow/pkg/validator"       // A common validator package (you might need to create this)
+	"github.com/DhavalSuthar-24/miow/internal/middleware"    // Your middleware package
+	responses "github.com/DhavalSuthar-24/miow/pkg/response" // A common responses package (you might need to create this)
+	"github.com/DhavalSuthar-24/miow/pkg/validator"          // A common validator package (you might need to create this)
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

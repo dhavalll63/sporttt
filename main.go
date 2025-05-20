@@ -14,7 +14,7 @@ import (
 
 // @title MiowNation REST API(-_-)
 // @version 1.0
-// @description This is a sample server for demonstrating Swagger with Gin.
+// @description This is a  server for Sport_go🏏.
 // @host localhost:8088
 // @BasePath /api
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	cfg := config.GetConfig()
 
 	err := config.DB.AutoMigrate(
-		&user.User{}, &user.Role{}, &auth.OTP{},
+		&user.User{}, &user.Role{}, &auth.OTP{}, &user.UserRole{},
 		&sport.Sport{}, &sport.UserSport{}, &sport.Skill{},
 		&venue.Venue{}, &venue.Ground{}, &venue.Booking{},
 		&user.RefreshToken{},
