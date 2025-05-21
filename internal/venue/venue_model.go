@@ -126,7 +126,6 @@ type AutoTimeSlotInput struct {
 	Equipment    string   `json:"equipment"`
 }
 
-// BookingInput represents the input for booking creation
 type BookingInput struct {
 	GroundID  uint      `json:"ground_id" binding:"required"`
 	StartTime time.Time `json:"start_time" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`

@@ -37,7 +37,7 @@ func SendSuccess(c *gin.Context, statusCode int, message string, data interface{
 }
 
 func SendError(c *gin.Context, statusCode int, message string, errors interface{}) {
-	c.AbortWithStatusJSON(statusCode, ErrorResponse{ // Abort to stop further processing
+	c.AbortWithStatusJSON(statusCode, ErrorResponse{
 		Status:  "error",
 		Message: message,
 		Errors:  errors,

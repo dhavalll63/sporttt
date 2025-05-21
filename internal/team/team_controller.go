@@ -12,7 +12,6 @@ import (
 	// Generic response package
 	"github.com/DhavalSuthar-24/miow/pkg/responses"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm/clause"
 )
 
 const (
@@ -197,7 +196,7 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 	// Use a transaction to create team and initial member
 	err := tc.repo.WithTransaction(func(repo TeamRepository) error {
 		// Create team within transaction using the repo parameter
-		if err := repo.Create(&team); err != nil {
+		if err := repo.CreateTeam(&team); err != nil {
 			return err
 		}
 
@@ -210,7 +209,7 @@ func (tc *TeamController) CreateTeam(c *gin.Context) {
 			JoinedAt:  time.Now(),
 			IsActive:  true,
 		}
-		return repo.Create(&creatorMember)
+		return repo.AddTeamMember(&creatorMember)
 	})
 
 	if err != nil {
@@ -1079,14 +1078,6 @@ func (tc *TeamController) RespondToJoinRequest(c *gin.Context) {
 		}
 
 		joinRequest.Status = StatusApproved
-		newMember := TeamMember{
-			TeamID:   joinRequest.TeamID,
-			UserID:   joinRequest.UserID,
-			Role:     RolePlayer, // Default role on approval, can be changed later
-			Position: joinRequest.Position,
-			JoinedAt: time.Now(),
-			IsActive: true,
-		}
 
 		// Transaction to update request and add member
 		txErr := tc.repo.WithTransaction(func(repo TeamRepository) error {
@@ -1102,7 +1093,7 @@ func (tc *TeamController) RespondToJoinRequest(c *gin.Context) {
 				JoinedAt: time.Now(),
 				IsActive: true,
 			}
-			return repo.Create(&newMember)
+			return repo.AddTeamMember(&newMember)
 		})
 		if txErr != nil {
 			responses.SendError(c, http.StatusInternalServerError, "Failed to approve join request: "+txErr.Error())
@@ -1442,27 +1433,20 @@ func (tc *TeamController) RespondToTeamInvitation(c *gin.Context) {
 		}
 
 		invitation.Status = StatusAccepted
-		newMember := TeamMember{
-			TeamID:    invitation.TeamID,
-			UserID:    invitation.UserID,
-			Role:      invitation.Role,
-			Position:  invitation.Position,
-			JoinedAt:  time.Now(),
-			IsActive:  true,
-			IsCaptain: (invitation.Role == RoleCaptain), // Set IsCaptain if role is captain
-		}
 
 		txErr := tc.repo.WithTransaction(func(repo TeamRepository) error {
-			if err := tx.Save(invitation).Error; err != nil {
+			if err := repo.UpdateTeamInvitation(invitation); err != nil {
 				return err
 			}
-			if err := tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "team_id"}, {Name: "user_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"role", "position", "is_active", "is_captain", "joined_at", "updated_at"}),
-			}).Create(&newMember).Error; err != nil {
-				return err
-			}
-			return nil
+			return repo.AddTeamMember(&TeamMember{
+				TeamID:    invitation.TeamID,
+				UserID:    invitation.UserID,
+				Role:      invitation.Role,
+				Position:  invitation.Position,
+				JoinedAt:  time.Now(),
+				IsActive:  true,
+				IsCaptain: (invitation.Role == RoleCaptain),
+			})
 		})
 
 		if txErr != nil {

@@ -4,18 +4,15 @@ import (
 	"github.com/DhavalSuthar-24/miow/config"                 // Assuming your config package
 	mw "github.com/DhavalSuthar-24/miow/internal/middleware" // Assuming your middleware package
 
-	// "github.com/DhavalSuthar-24/miow/internal/user" // If userRepo is needed by controller
 	"github.com/DhavalSuthar-24/miow/pkg/rmiddleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-// TeamRoutes sets up all team-related routes
 func TeamRoutes(router *gin.RouterGroup, db *gorm.DB, appConfig *config.Config, jwtSecret string,
 ) {
-	// userRepo := user.NewUserRepository(db) // If needed
 	teamRepo := NewTeamRepository(db)
-	teamController := NewTeamController(teamRepo, appConfig /*, userRepo*/)
+	teamController := NewTeamController(teamRepo, appConfig)
 
 	// Public team routes
 	router.GET("/teams", teamController.GetAllTeams)

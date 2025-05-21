@@ -7,14 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SuccessResponse represents a standard success JSON response.
 type SuccessResponse struct {
 	Status  string      `json:"status"`  // "success"
 	Message string      `json:"message"` // Optional success message
 	Data    interface{} `json:"data"`    // The actual data payload
 }
 
-// ErrorResponse represents a standard error JSON response.
 type ErrorResponse struct {
 	Status  string `json:"status"`  // "error" or "fail"
 	Message string `json:"message"` // Error message
@@ -66,13 +64,12 @@ func SendError(c *gin.Context, statusCode int, message string) {
 	})
 }
 
-// SendPaginated sends a standardized success response for paginated data.
 func SendPaginated(c *gin.Context, statusCode int, message string, data interface{}, totalItems int64, currentPage int, pageSize int) {
 	if message == "" {
 		message = "Data retrieved successfully"
 	}
 	if pageSize <= 0 {
-		pageSize = 10 // Default page size if invalid
+		pageSize = 10
 	}
 	totalPages := int(math.Ceil(float64(totalItems) / float64(pageSize)))
 	if totalPages == 0 && totalItems > 0 { // Ensure at least one page if there are items
@@ -109,43 +106,4 @@ func SendPaginated(c *gin.Context, statusCode int, message string, data interfac
 			PreviousPage: prevPage,
 		},
 	})
-}
-
-// --- You can add more specific response helpers as needed ---
-
-// NotFound sends a 404 Not Found error response.
-func NotFound(c *gin.Context, resourceName string) {
-	SendError(c, http.StatusNotFound, resourceName+" not found")
-}
-
-// Unauthorized sends a 401 Unauthorized error response.
-func Unauthorized(c *gin.Context, message string) {
-	if message == "" {
-		message = "Unauthorized access"
-	}
-	SendError(c, http.StatusUnauthorized, message)
-}
-
-// Forbidden sends a 403 Forbidden error response.
-func Forbidden(c *gin.Context, message string) {
-	if message == "" {
-		message = "Access to this resource is forbidden"
-	}
-	SendError(c, http.StatusForbidden, message)
-}
-
-// BadRequest sends a 400 Bad Request error response.
-func BadRequest(c *gin.Context, message string) {
-	if message == "" {
-		message = "Invalid request payload or parameters"
-	}
-	SendError(c, http.StatusBadRequest, message)
-}
-
-// InternalServerError sends a 500 Internal Server Error response.
-func InternalServerError(c *gin.Context, message string) {
-	if message == "" {
-		message = "An unexpected error occurred on the server"
-	}
-	SendError(c, http.StatusInternalServerError, message)
 }

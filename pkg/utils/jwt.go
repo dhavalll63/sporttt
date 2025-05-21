@@ -8,8 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-var jwtSecret = []byte(os.Getenv("JWT_SECRET")) // Set in your .env or config
-var refreshSecret = []byte(os.Getenv("REFRESH_SECRET"))
+var jwtSecret = []byte(os.Getenv("JWT_ACCESS_TOKEN_SECRET"))
+var refreshSecret = []byte(os.Getenv("JWT_REFRESH_TOKEN_SECRET"))
 
 // GenerateJWT creates an access token
 func GenerateJWT(userID uint, minutes int) (string, error) {

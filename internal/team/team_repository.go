@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// TeamRepository defines the interface for team data operations
 type TeamRepository interface {
 	// Team operations
 	CreateTeam(team *Team) error
@@ -398,4 +397,22 @@ func (r *teamRepository) WithTransaction(txFunc func(TeamRepository) error) erro
 		// Execute the function with the transactional repository
 		return txFunc(txRepo)
 	})
+}
+
+func (r *teamRepository) GetAllTeamsAdmin(page, limit int, includeDeleted bool) ([]Team, int64, error) {
+	var teams []Team
+	var total int64
+
+	query := r.db.Model(&Team{}).Preload("Sport")
+
+	if !includeDeleted {
+		query = query.Where("is_deleted = ?", false)
+	}
+
+	query.Count(&total)
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Order("created_at desc").Find(&teams).Error; err != nil {
+		return nil, 0, err
+	}
+	return teams, total, nil
 }
